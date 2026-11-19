@@ -1,1 +1,1 @@
-export default { content: ['./index.html','./src/**/*.{ts,tsx}'], theme: { extend: { colors: { nacos: '#4B0082' }, fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] } } }, plugins: [] };
+export default { content: ['./index.html','./src/**/*.{ts,tsx}'], darkMode: ['class', '[data-theme="dark"]'], theme: { extend: { colors: { nacos: { DEFAULT: '#008751', deep: '#00663D', tint: '#ECFDF5' }, carbon: '#0B0F0E' }, fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] } } }, plugins: [] };

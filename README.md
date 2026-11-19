@@ -1,6 +1,6 @@
 # NACOS MOUAU Digital Association Platform
 
-React, TypeScript and Vite frontend with Cloudflare Pages Functions and D1 foundations. R2 will be bound when file uploads are implemented.
+NACOS MOUAU Digital Association Platform for the 2025/2026 academic session. React, TypeScript, Vite and Tailwind frontend with Cloudflare Pages Functions and D1 persistence.
 
 ## Cloudflare Pages setup
 
@@ -19,6 +19,13 @@ This project uses `wrangler.toml` as the Pages Functions configuration source of
 - `npm run build` for the production frontend build.
 - `npm run cf:dev` to run Pages Functions locally after configuring local D1/R2 bindings in Wrangler.
 
-## Current scope
+## Frontend architecture
 
-The initial milestone provides the public visual foundation, database schema for users/sessions/audit/settings, and server-side registration, login, logout and session lookup. New registrations remain pending until an administrator approval flow is implemented. Remaining association modules and CMS authoring are tracked in `AGENTS.md`.
+- Public routes: home, national and chapter about pages, executives, news, events, achievements, gallery, documents and contact. Content is loaded through TanStack Query hooks with empty states when API records are not available.
+- Member and administrator shells expose the association modules through responsive, role-gated routes.
+- `src/lib/api.ts` centralizes cookie credentials, CSRF headers, JSON errors and optional 404/503 fallbacks.
+- Forms use React Hook Form and Zod validation; notifications use Sonner.
+- Theme preference persists in browser storage.
+- The initial schema supports users, sessions, audits and site settings. Member registration also records academic details through migration `0002_member_registration.sql`. New registrations remain pending until an administrator approval flow is implemented.
+
+Other domain APIs are typed in `src/types/` and the frontend is prepared to connect to those endpoints as they are implemented. See `AGENTS.md` for the remaining module plan.
