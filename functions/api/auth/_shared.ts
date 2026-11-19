@@ -1,4 +1,7 @@
 export interface Env { DB: D1Database; SETUP_TOKEN?: string }
+// Cloudflare Workers rejects PBKDF2 deriveBits iteration counts above 100,000.
+// Keep this value in sync with scripts/generate_admin_sql.py.
+const PASSWORD_ITERATIONS = 100_000;
 export const json = (data: unknown, status = 200, headers: HeadersInit = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 export const fail = (message: string, status = 400) => json({ error: message }, status);
 export const randomId = () => crypto.randomUUID();
@@ -8,7 +11,7 @@ export async function sha256(value: string): Promise<string> {
 }
 export async function passwordHash(password: string, salt = crypto.randomUUID()): Promise<string> {
   const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode(salt), iterations: 310000, hash: 'SHA-256' }, material, 256);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode(salt), iterations: PASSWORD_ITERATIONS, hash: 'SHA-256' }, material, 256);
   return `${salt}:${Array.from(new Uint8Array(bits), b => b.toString(16).padStart(2, '0')).join('')}`;
 }
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {

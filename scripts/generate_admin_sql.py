@@ -38,7 +38,7 @@ def main() -> int:
 
     user_id = str(uuid.uuid4())
     salt = str(uuid.uuid4())
-    derived = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 310_000, dklen=32)
+    derived = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000, dklen=32)
     password_hash = f"{salt}:{derived.hex()}"
     audit_id = str(uuid.uuid4())
 

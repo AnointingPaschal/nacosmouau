@@ -18,6 +18,8 @@ This project uses `wrangler.toml` as the Pages Functions configuration source of
 
 If Wrangler cannot be installed, `python3 scripts/generate_admin_sql.py` can generate SQL for the first super administrator. Run it locally in Termux; the password is entered without echo and only the PBKDF2 hash is printed. Paste the generated statements into the authenticated Cloudflare D1 Console for the database bound to production. This is for an empty `users` table only; then verify the row and sign in at `/login?role=admin`. Never share or commit the generated SQL.
 
+Passwords use PBKDF2-HMAC-SHA256 with 100,000 iterations because Cloudflare Workers rejects higher PBKDF2 iteration counts. To reset a manually-created administrator hash, run `python3 scripts/generate_password_reset_sql.py` in Termux and paste its one `UPDATE` statement into the production D1 Console. Use the same new password at sign-in. This reset utility updates an existing account by email and does not print the password itself; treat its generated SQL as sensitive.
+
 ## Local development
 
 - `npm install`
