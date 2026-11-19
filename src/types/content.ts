@@ -21,7 +21,7 @@ export interface SiteSettings {
   contact_phone: string | null;
   address: string | null;
   social_links: { label: string; url: string }[];
-  navigation: { label: string; href: string; visible: boolean; order: number }[];
+  navigation: { label: string; href: string; location?: 'header' | 'footer'; visible: boolean; order: number }[];
   hero_slides: HeroSlide[];
   [key: string]: unknown;
 }

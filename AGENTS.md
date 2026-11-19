@@ -1,14 +1,14 @@
 # NACOS MOUAU Platform Implementation Plan
 
 ## Phases
-1. Foundation: Vite + React + TypeScript, design tokens, Cloudflare Pages Functions, D1 schema, secure server-side authentication and RBAC.
-2. Public site and CMS: editable pages, navigation, media, news, events, documents and site settings.
+1. Foundation: Vite + React + TypeScript, design tokens, Cloudflare Pages Functions, additive D1 schema, HMAC sessions, CSRF checks and role/permission seeds. (Frontend foundation exists; review runtime secrets and deployment bindings.)
+2. Public site and CMS: editable pages, navigation, R2 media, news, events, documents, hero slides and site settings. (Core CMS APIs and file flow exist; remaining content workflows continue in this phase.)
 3. Membership: registration, approval, profiles, member IDs, verification, QR cards and renewals.
 4. Payments and finance: verified Paystack flows, invoices, receipts, dues, levies, expenses, approvals and reports.
 5. Elections and executives: administration, nominations, secret ballots, eligibility, results, tenure and handover records.
 6. Events and communications: registration, ticketing, attendance, announcements, notifications and galleries.
 7. Welfare and extended modules: requests, alumni, sponsors, merchandise and archives.
-8. Hardening: permissions, audit trails, accessibility, operational configuration, end-to-end verification and deployment.
+8. Hardening: complete module coverage, rate limiting, Turnstile/email provider integrations, permission review, audit trails, accessibility, operational configuration, end-to-end verification and deployment.
 
 ## Architecture rules
 - React/TypeScript/Vite frontend; Cloudflare Pages Functions APIs; D1 as the system of record; R2 for uploads.

@@ -1,0 +1,12 @@
+import { useRef, useState } from 'react';
+import { FileImage, FileText, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '../lib/api';
+
+export interface UploadedFile { url: string; key: string; filename: string; size: number; mimeType: string }
+export function FileUpload({value,onChange,accept='image/*',label='Choose a file',maxSizeMb=8,purpose='media'}:{value?:string|null;onChange:(file:UploadedFile|null)=>void;accept?:string;label?:string;maxSizeMb?:number;purpose?:'media'|'profile'|'document'}) {
+  const input=useRef<HTMLInputElement>(null); const [progress,setProgress]=useState<number|null>(null); const [dragging,setDragging]=useState(false);
+  const image=accept.includes('image'); const allowed=accept.split(',').map(t=>t.trim());
+  const upload=async(file?:File)=>{if(!file)return; const validType=allowed.some(type=>type.endsWith('/*')?file.type.startsWith(type.slice(0,-1)):file.type===type); if(!validType){toast.error('This file type is not allowed.');return;} if(file.size<=0||file.size>maxSizeMb*1024*1024){toast.error(`Choose a file smaller than ${maxSizeMb} MB.`);return;} setProgress(0);try{const saved=await api.upload<UploadedFile>(file,setProgress,purpose);onChange(saved);toast.success('File uploaded');}catch(error){toast.error(error instanceof Error?error.message:'Upload failed');}finally{setProgress(null);}};
+  return <div className="file-upload"><input ref={input} type="file" accept={accept} hidden onChange={e=>{void upload(e.target.files?.[0]);e.currentTarget.value='';}}/><div className={`file-upload-drop${dragging?' is-dragging':''}`} role="button" tabIndex={0} onClick={()=>input.current?.click()} onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')input.current?.click();}} onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={e=>{e.preventDefault();setDragging(false);void upload(e.dataTransfer.files[0]);}}>{value&&image?<img className="file-upload-preview" src={value} alt="Selected upload preview"/>:<span className="file-upload-icon">{image?<FileImage/>:<FileText/>}</span>}<strong>{progress!==null?'Uploading…':label}</strong><small>Drag and drop or browse · Max {maxSizeMb} MB</small>{progress!==null&&<span className="file-upload-progress"><i style={{width:`${progress}%`}}/></span>}</div>{value&&<div className="file-upload-selected"><span>{image?<FileImage size={16}/>:<FileText size={16}/>} Uploaded file</span><button type="button" aria-label="Remove file" onClick={()=>onChange(null)}><X size={16}/></button></div>}</div>
+}

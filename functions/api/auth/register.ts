@@ -30,5 +30,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const id = randomId();
   await env.DB.prepare('INSERT INTO users (id,email,password_hash,full_name,phone,matric_number,academic_level,faculty,department,academic_session) VALUES (?,?,?,?,?,?,?,?,?,?)')
     .bind(id,email,await passwordHash(password),fullName,phone,matricNumber,academicLevel,faculty,department,academicSession).run();
+  await env.DB.prepare(`INSERT OR IGNORE INTO user_roles(user_id,role_id) VALUES(?,'member')`).bind(id).run();
   return json({ id, email, fullName, status: 'pending', message: 'Registration received. An administrator must approve your membership.' }, 201);
 };

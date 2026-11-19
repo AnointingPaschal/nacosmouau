@@ -1,0 +1,2 @@
+import { Env, json } from './_shared';
+export const onRequestGet:PagesFunction<Env>=async({env})=>{try{const row=await env.DB.prepare("SELECT COUNT(*) AS count FROM users WHERE role IN ('admin','super_admin') OR id IN (SELECT user_id FROM user_roles WHERE role_id='super_admin')").first<{count:number}>();return json({available:(row?.count??0)===0})}catch(error){console.error('Setup status lookup failed:',error);return json({error:'Administrator setup status is unavailable.'},503)}};
