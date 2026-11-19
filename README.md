@@ -14,6 +14,10 @@ This project uses `wrangler.toml` as the Pages Functions configuration source of
 6. When uploads are implemented, create the R2 bucket with `npx wrangler r2 bucket create nacos-mouau-media`, add an `[[r2_buckets]]` binding named `MEDIA` to `wrangler.toml`, and deploy again.
 5. Add production secrets only through Cloudflare secret bindings. Never put secrets in Vite variables.
 
+## Manual initial administrator recovery
+
+If Wrangler cannot be installed, `python3 scripts/generate_admin_sql.py` can generate SQL for the first super administrator. Run it locally in Termux; the password is entered without echo and only the PBKDF2 hash is printed. Paste the generated statements into the authenticated Cloudflare D1 Console for the database bound to production. This is for an empty `users` table only; then verify the row and sign in at `/login?role=admin`. Never share or commit the generated SQL.
+
 ## Local development
 
 - `npm install`
