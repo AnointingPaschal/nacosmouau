@@ -41,6 +41,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     if (response.status === 404 || response.status === 503 || response.status === 502) throw new ApiUnavailableError(response.status, message);
     throw new ApiError(message, response.status, payload);
   }
+  // Pages can serve index.html with a 200 response for an API URL when a
+  // Function has not been deployed yet. Never treat that HTML as API data:
+  // doing so makes typed hooks receive strings and crash during rendering.
+  if (response.status !== 204 && !contentType.includes('application/json')) {
+    throw new ApiUnavailableError(503, 'The association service is not available yet. Please try again later.');
+  }
   return payload as T;
 }
 export const api = {
