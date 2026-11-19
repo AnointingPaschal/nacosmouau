@@ -1,16 +1,16 @@
 # NACOS MOUAU Digital Association Platform
 
-React, TypeScript and Vite frontend with Cloudflare Pages Functions, D1 and R2 foundations.
+React, TypeScript and Vite frontend with Cloudflare Pages Functions and D1 foundations. R2 will be bound when file uploads are implemented.
 
 ## Cloudflare Pages setup
 
-1. Create a D1 database named `nacos-mouau` and bind it in Pages under **Settings → Functions → D1 database bindings** with variable name `DB`.
-2. Apply migrations from this repository using Wrangler after linking your Cloudflare account:
-   `npx wrangler d1 migrations apply nacos-mouau --remote`
-3. R2 is not currently used by the Functions and is not bound in the deploy config. When file uploads are implemented, create the bucket with `npx wrangler r2 bucket create nacos-mouau-media`, add its `[[r2_buckets]]` binding named `MEDIA` to `wrangler.toml`, and deploy again. This project uses Wrangler configuration as the binding source of truth.
-4. Add production secrets only through Cloudflare settings/secret bindings when their integrations are implemented. Never put secrets in Vite variables.
+This project uses `wrangler.toml` as the Pages Functions configuration source of truth. Resource bindings must be declared there; the dashboard binding controls may be disabled while Wrangler configuration is enabled.
 
-The Pages build can publish static assets and Functions without a D1 database UUID in source control. Authentication endpoints require the `DB` binding at runtime.
+1. Create the D1 database if it does not exist: `npx wrangler d1 create nacos-mouau`.
+2. Put the returned database UUID in `wrangler.toml` under the `DB` binding. The current repository is configured with the supplied database ID.
+3. Apply migrations after authenticating Wrangler: `npx wrangler login`, then `npx wrangler d1 migrations apply nacos-mouau --remote`.
+4. When uploads are implemented, create the R2 bucket with `npx wrangler r2 bucket create nacos-mouau-media`, add an `[[r2_buckets]]` binding named `MEDIA` to `wrangler.toml`, and deploy again.
+5. Add production secrets only through Cloudflare secret bindings. Never put secrets in Vite variables.
 
 ## Local development
 
