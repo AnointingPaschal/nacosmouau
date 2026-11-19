@@ -24,8 +24,7 @@ def main() -> int:
     salt = str(uuid.uuid4())
     digest = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100_000, dklen=32)
     stored = f'{salt}:{digest.hex()}'
-    print('UPDATE users SET password_hash=' + quote(stored) + ', updated_at=datetime(\'now\') WHERE email=' + quote(email) + ';')
-    print('-- Verify only that one row changed: check the SQL Console result before signing in.')
+    print('UPDATE users SET password_hash=' + quote(stored) + ', updated_at=datetime(\'now\') WHERE email=' + quote(email) + ' RETURNING id,email,role,status;')
     return 0
 
 
