@@ -33,21 +33,29 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     const id = randomId();
     const passwordHashValue = await passwordHash(password);
-    // D1 batch is transactional, and this conditional insert prevents parallel
+    // This conditional insert is atomic in SQLite, preventing simultaneous
     // setup requests from creating more than one initial administrator.
-    const [created] = await env.DB.batch([
-      env.DB.prepare(`INSERT INTO users (id,email,password_hash,full_name,role,status)
-        SELECT ?,?,?,?,'super_admin','active'
-        WHERE NOT EXISTS (SELECT 1 FROM users)`)
-        .bind(id, email, passwordHashValue, fullName),
-      env.DB.prepare(`INSERT INTO audit_log (id,actor_user_id,action,target_type,target_id,metadata_json)
-        SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM users WHERE id=?)`)
-        .bind(randomId(), id, 'initial_super_admin_created', 'user', id, JSON.stringify({ email }), id),
-    ]);
+    const created = await env.DB.prepare(`INSERT INTO users (id,email,password_hash,full_name,role,status)
+      SELECT ?,?,?,?,'super_admin','active'
+      WHERE NOT EXISTS (SELECT 1 FROM users)`)
+      .bind(id, email, passwordHashValue, fullName).run();
     if (!created.meta.changes) return fail('Initial setup has already been completed. Sign in with the administrator account.', 409);
+
+    // Keep account creation successful if audit storage is temporarily damaged;
+    // the failure is still visible in the Cloudflare Function logs.
+    try {
+      await env.DB.prepare('INSERT INTO audit_log (id,actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,?,?,?,?,?)')
+        .bind(randomId(), id, 'initial_super_admin_created', 'user', id, JSON.stringify({ email })).run();
+    } catch (auditError) {
+      console.error('Initial administrator audit record failed:', auditError);
+    }
     return json({ ok: true, message: 'Initial administrator account created. You can now sign in.' }, 201);
   } catch (error) {
     console.error('Initial administrator setup failed:', error);
-    return fail('Administrator setup could not be completed. Check the D1 migrations and Cloudflare Function logs, then retry.', 500);
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('CHECK constraint failed')) return fail('The D1 user role schema is not ready. Confirm the users table role constraint includes super_admin.', 503);
+    if (message.includes('no such table')) return fail('The D1 schema is incomplete. Recheck the required foundation tables in this database.', 503);
+    if (message.includes('UNIQUE constraint failed: users.email')) return fail('An account already exists with this email address.', 409);
+    return fail('Administrator creation failed in D1. Check the auth/setup Function log for the database error and retry.', 500);
   }
 };
