@@ -6,6 +6,12 @@ compatibility_date = "2026-11-19"
 # using the binding name DB. Do not commit database identifiers or credentials.
 # Local Wrangler deployments can add a database_id after creating the D1 database.
 
+[[d1_databases]]
+binding = "DB"
+database_name = "nacos-mouau"
+database_id = "51c7fdd7-e6d0-4269-8e0b-d0cf2fe68f38"
+migrations_dir = "migrations"
+
 [[r2_buckets]]
 binding = "MEDIA"
 bucket_name = "nacos-mouau-media"
