@@ -1,4 +1,4 @@
-import { Env, fail, json, passwordHash, randomId, sha256 } from './_shared';
+import { Env, fail, json, passwordHash, randomId } from './_shared';
 
 type SetupBody = { setupToken?: string; email?: string; fullName?: string; password?: string };
 
@@ -25,17 +25,29 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (fullName.length < 2 || fullName.length > 120) return fail('Enter your full name.');
   if (password.length < 12 || password.length > 200) return fail('Password must be between 12 and 200 characters.');
 
-  const id = randomId();
-  const passwordHashValue = await passwordHash(password);
-  // The conditional insert is atomic in D1, so simultaneous setup requests
-  // cannot create more than one initial administrator or race registration.
-  const result = await env.DB.prepare(`INSERT INTO users (id,email,password_hash,full_name,role,status)
-    SELECT ?,?,?,?,'super_admin','active'
-    WHERE NOT EXISTS (SELECT 1 FROM users)`)
-    .bind(id, email, passwordHashValue, fullName).run();
-  if (!result.meta.changes) return fail('Initial setup has already been completed. Sign in with the administrator account.', 409);
+  try {
+    const schema = await env.DB.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").first<{ sql: string }>();
+    if (!schema?.sql.includes('super_admin')) {
+      return fail('The database is missing the administrator role migration. Apply migrations/0003_super_admin_role.sql to the remote D1 database, then retry setup.', 503);
+    }
 
-  await env.DB.prepare('INSERT INTO audit_log (id,actor_user_id,action,target_type,target_id,metadata_json) VALUES (?,?,?,?,?,?)')
-    .bind(randomId(), id, 'initial_super_admin_created', 'user', id, JSON.stringify({ email })).run();
-  return json({ ok: true, message: 'Initial administrator account created. You can now sign in.' }, 201);
+    const id = randomId();
+    const passwordHashValue = await passwordHash(password);
+    // D1 batch is transactional, and this conditional insert prevents parallel
+    // setup requests from creating more than one initial administrator.
+    const [created] = await env.DB.batch([
+      env.DB.prepare(`INSERT INTO users (id,email,password_hash,full_name,role,status)
+        SELECT ?,?,?,?,'super_admin','active'
+        WHERE NOT EXISTS (SELECT 1 FROM users)`)
+        .bind(id, email, passwordHashValue, fullName),
+      env.DB.prepare(`INSERT INTO audit_log (id,actor_user_id,action,target_type,target_id,metadata_json)
+        SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM users WHERE id=?)`)
+        .bind(randomId(), id, 'initial_super_admin_created', 'user', id, JSON.stringify({ email }), id),
+    ]);
+    if (!created.meta.changes) return fail('Initial setup has already been completed. Sign in with the administrator account.', 409);
+    return json({ ok: true, message: 'Initial administrator account created. You can now sign in.' }, 201);
+  } catch (error) {
+    console.error('Initial administrator setup failed:', error);
+    return fail('Administrator setup could not be completed. Check the D1 migrations and Cloudflare Function logs, then retry.', 500);
+  }
 };
