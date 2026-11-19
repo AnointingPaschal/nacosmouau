@@ -2,11 +2,9 @@ name = "nacos-mouau-platform"
 pages_build_output_dir = "./dist"
 compatibility_date = "2026-11-19"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "nacos-mouau"
-database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
-migrations_dir = "migrations"
+# Bind D1 in Cloudflare Pages > Settings > Functions > D1 database bindings
+# using the binding name DB. Do not commit database identifiers or credentials.
+# Local Wrangler deployments can add a database_id after creating the D1 database.
 
 [[r2_buckets]]
 binding = "MEDIA"
