@@ -19,12 +19,13 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "latest",
-    "autoprefixer": "latest",
-    "tailwindcss": "latest",
+    "autoprefixer": "10.4.21",
+    "tailwindcss": "3.4.17",
     "typescript": "latest",
     "vite": "latest",
     "wrangler": "latest",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "postcss": "8.5.6"
   }
 }
