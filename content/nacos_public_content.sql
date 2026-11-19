@@ -90,3 +90,66 @@ VALUES (
   '"Department of Computer Science, Michael Okpara University of Agriculture, Umudike, Abia State, Nigeria"'
 )
 ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json;
+
+-- Requires migrations/0006_page_section_keys.sql.
+-- These homepage section titles and descriptions are verified NACOS material;
+-- no MOUAU executive, event, project, or membership records are fabricated.
+INSERT INTO page_sections (
+  id, page_id, section_key, title, body, display_order, is_published
+)
+SELECT 'home-section-about', id, 'about',
+       'A community for computing students at MOUAU',
+       'NACOS is the umbrella association for students in computing and related disciplines across Nigeria. At MOUAU, the chapter connects students with the wider NACOS community and its focus on computing, innovation, and entrepreneurship.',
+       0, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET
+  section_key = excluded.section_key, title = excluded.title,
+  body = excluded.body, display_order = excluded.display_order,
+  is_published = excluded.is_published;
+
+INSERT INTO page_sections (id, page_id, section_key, title, body, display_order, is_published)
+SELECT 'home-section-vision', id, 'vision',
+       'Advance computing and innovation',
+       'NACOS aspires to be a leading student organization in information technology and entrepreneurship, setting a standard for excellence and innovation.',
+       1, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET
+  section_key = excluded.section_key, title = excluded.title,
+  body = excluded.body, display_order = excluded.display_order,
+  is_published = excluded.is_published;
+
+INSERT INTO page_sections (id, page_id, section_key, title, body, display_order, is_published)
+SELECT 'home-section-mission', id, 'mission',
+       'Build a connected community',
+       'NACOS brings student IT professionals together to advance technology, innovation, and entrepreneurship, and to promote digital inclusion.',
+       2, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET
+  section_key = excluded.section_key, title = excluded.title,
+  body = excluded.body, display_order = excluded.display_order,
+  is_published = excluded.is_published;
+
+INSERT INTO page_sections (id, page_id, section_key, title, body, display_order, is_published)
+SELECT 'home-section-executives', id, 'executives', 'Executive Council', '', 3, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET section_key = excluded.section_key, title = excluded.title;
+INSERT INTO page_sections (id, page_id, section_key, title, body, display_order, is_published)
+SELECT 'home-section-news', id, 'news', 'Latest news', '', 4, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET section_key = excluded.section_key, title = excluded.title;
+INSERT INTO page_sections (id, page_id, section_key, title, body, display_order, is_published)
+SELECT 'home-section-announcements', id, 'announcements', 'Announcements', '', 5, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET section_key = excluded.section_key, title = excluded.title;
+INSERT INTO page_sections (id, page_id, section_key, title, body, display_order, is_published)
+SELECT 'home-section-events', id, 'events', 'Upcoming events', '', 6, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET section_key = excluded.section_key, title = excluded.title;
+INSERT INTO page_sections (id, page_id, section_key, title, body, display_order, is_published)
+SELECT 'home-section-achievements', id, 'achievements', 'Achievements & milestones', '', 7, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET section_key = excluded.section_key, title = excluded.title;
+INSERT INTO page_sections (id, page_id, section_key, title, body, display_order, is_published)
+SELECT 'home-section-gallery', id, 'gallery', 'Chapter gallery', '', 8, 1
+FROM pages WHERE slug = 'home'
+ON CONFLICT(id) DO UPDATE SET section_key = excluded.section_key, title = excluded.title;
