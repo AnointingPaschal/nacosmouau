@@ -2,9 +2,8 @@ name = "nacos-mouau-platform"
 pages_build_output_dir = "./dist"
 compatibility_date = "2026-11-19"
 
-# Bind D1 in Cloudflare Pages > Settings > Functions > D1 database bindings
-# using the binding name DB. Do not commit database identifiers or credentials.
-# Local Wrangler deployments can add a database_id after creating the D1 database.
+# D1 binding is configured here because this Pages project deploys from Wrangler config.
+# The database UUID identifies the database; do not commit API tokens or secrets.
 
 [[d1_databases]]
 binding = "DB"
