@@ -9,21 +9,10 @@ export class ApiUnavailableError extends ApiError {
 }
 export const isApiUnavailable = (error: unknown): error is ApiUnavailableError => error instanceof ApiUnavailableError;
 
-function csrfToken(): string | undefined {
-  const match = document.cookie.split('; ').find((entry) => entry.startsWith('csrf_token='));
-  if (match) return decodeURIComponent(match.slice('csrf_token='.length));
-  return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || undefined;
-}
-
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   const method = (init.method ?? 'GET').toUpperCase();
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    if (!csrfToken()) { try { await fetch('/api/auth/csrf', { credentials: 'include' }); } catch { /* The mutation request will return the actionable error. */ } }
-    const csrf = csrfToken();
-    if (csrf) headers.set('X-CSRF-Token', csrf);
-  }
   let response: Response;
   try {
     response = await fetch(path.startsWith('/api/') ? path : `/api/${path.replace(/^\//, '')}`, {
@@ -58,9 +47,7 @@ export const api = {
   patch: <T, B = unknown>(path: string, body: B) => request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
   upload: <T>(file: File, onProgress?: (percent: number) => void, purpose: 'media'|'profile'|'document' = 'media') => new Promise<T>(async (resolve, reject) => {
-    if (!csrfToken()) { try { await fetch('/api/auth/csrf', { credentials: 'include' }); } catch { /* xhr gives the underlying connectivity failure */ } }
     const xhr = new XMLHttpRequest(); const form = new FormData(); form.append('file', file); form.append('purpose', purpose); xhr.open('POST', '/api/upload'); xhr.withCredentials = true;
-    const csrf = csrfToken(); if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
     xhr.upload.onprogress = event => { if (event.lengthComputable) onProgress?.(Math.round(event.loaded / event.total * 100)); };
     xhr.onerror = () => reject(new ApiUnavailableError(0, 'Could not reach the file service. Check your connection and try again.'));
     xhr.onload = () => { let payload: unknown; try { payload = JSON.parse(xhr.responseText); } catch { payload = undefined; } if (xhr.status >= 200 && xhr.status < 300) { onProgress?.(100); resolve(payload as T); } else { const message = payload && typeof payload === 'object' && 'error' in payload ? String((payload as {error:unknown}).error) : `Upload failed (${xhr.status}).`; reject(xhr.status===404||xhr.status===503?new ApiUnavailableError(xhr.status,message):new ApiError(message,xhr.status,payload)); } };

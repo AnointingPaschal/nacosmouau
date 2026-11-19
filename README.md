@@ -11,7 +11,7 @@ This project uses `wrangler.jsonc` as the Pages Functions configuration source o
 3. Apply migrations after authenticating Wrangler: `npx wrangler login`, then `npx wrangler d1 migrations apply nacos-mouau --remote`.
 4. Configure the initial administrator secret in Cloudflare Pages → Settings → Variables and Secrets. Add `SETUP_TOKEN` as a secret for production and redeploy. Use a long random value; never put it in this repository. The `/setup` flow is available only while the D1 database has no users.
 5. Create the R2 bucket with `npx wrangler r2 bucket create nacos-mouau-media` before deploying; `wrangler.jsonc` binds it as `BUCKET`.
-6. Configure production secrets through Cloudflare Pages secrets. `SESSION_SECRET` must be at least 32 random characters. Never put secrets in Vite variables.
+6. Configure provider secrets through Cloudflare Pages secrets. Session cookies use the existing D1-backed authentication flow; no `SESSION_SECRET` is required. Never put secrets in Vite variables.
 
 ## Manual initial administrator recovery
 
@@ -30,7 +30,7 @@ Passwords use PBKDF2-HMAC-SHA256 with 100,000 iterations because Cloudflare Work
 
 - Public routes: home, national and chapter about pages, executives, news, events, achievements, gallery, documents and contact. Content is loaded through TanStack Query hooks with empty states when API records are not available.
 - Member and administrator shells expose the association modules through responsive, role-gated routes.
-- `src/lib/api.ts` centralizes cookie credentials, CSRF headers, JSON errors and optional 404/503 fallbacks.
+- `src/lib/api.ts` centralizes cookie credentials, JSON errors and optional 404/503 fallbacks.
 - Forms use React Hook Form and Zod validation; notifications use Sonner.
 - Theme preference persists in browser storage.
 - The additive migrations `0004_platform_schema.sql` and `0005_seed_system.sql` add platform records, permissions, levels, and baseline settings without rewriting D1 history. New registrations remain pending until an administrator approves them.
@@ -40,4 +40,4 @@ CMS resource APIs are backed by D1 and admin mutations write audit records. The 
 
 ### Cloudflare secrets
 
-Set `SESSION_SECRET`, `PAYSTACK_SECRET_KEY`, `CLOUDFLARE_TURNSTILE_SECRET`, and `EMAIL_PROVIDER_API_KEY` as encrypted Cloudflare Pages secrets (or with `wrangler pages secret put`). They are intentionally absent from the checked-in configuration. Set `APP_URL` and `PAYSTACK_PUBLIC_KEY` under `vars` for each environment.
+Set `PAYSTACK_SECRET_KEY`, `CLOUDFLARE_TURNSTILE_SECRET`, and `EMAIL_PROVIDER_API_KEY` as encrypted Cloudflare Pages secrets (or with `wrangler pages secret put`). They are intentionally absent from the checked-in configuration. Set `APP_URL` and `PAYSTACK_PUBLIC_KEY` under `vars` for each environment.
