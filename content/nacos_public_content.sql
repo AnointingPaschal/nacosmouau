@@ -1,8 +1,3 @@
--- Public website starter content for NACOS MOUAU.
--- Run this in the production D1 SQL console after migrations/0004 and 0005.
--- Source: https://nacos.org.ng/ and https://nacos.org.ng/association
--- MOUAU-specific history, officers, events, metrics, and contact details are
--- intentionally omitted until verified by the chapter.
 
 INSERT INTO pages (id, slug, title, summary, body, status, published_at)
 VALUES
@@ -91,9 +86,6 @@ VALUES (
 )
 ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json;
 
--- Requires migrations/0006_page_section_keys.sql.
--- These homepage section titles and descriptions are verified NACOS material;
--- no MOUAU executive, event, project, or membership records are fabricated.
 INSERT INTO page_sections (
   id, page_id, section_key, title, body, display_order, is_published
 )
