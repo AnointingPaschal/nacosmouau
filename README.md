@@ -9,7 +9,9 @@ This project uses `wrangler.toml` as the Pages Functions configuration source of
 1. Create the D1 database if it does not exist: `npx wrangler d1 create nacos-mouau`.
 2. Put the returned database UUID in `wrangler.toml` under the `DB` binding. The current repository is configured with the supplied database ID.
 3. Apply migrations after authenticating Wrangler: `npx wrangler login`, then `npx wrangler d1 migrations apply nacos-mouau --remote`.
-4. When uploads are implemented, create the R2 bucket with `npx wrangler r2 bucket create nacos-mouau-media`, add an `[[r2_buckets]]` binding named `MEDIA` to `wrangler.toml`, and deploy again.
+4. Configure the initial administrator secret in Cloudflare Pages → Settings → Variables and Secrets. Add `SETUP_TOKEN` as a secret for production and redeploy. Use a long random value; never put it in this repository. The `/setup` flow is available only while the D1 database has no users.
+5. Apply new migrations before using features that depend on them: `npx wrangler d1 migrations apply nacos-mouau --remote`.
+6. When uploads are implemented, create the R2 bucket with `npx wrangler r2 bucket create nacos-mouau-media`, add an `[[r2_buckets]]` binding named `MEDIA` to `wrangler.toml`, and deploy again.
 5. Add production secrets only through Cloudflare secret bindings. Never put secrets in Vite variables.
 
 ## Local development
@@ -26,6 +28,6 @@ This project uses `wrangler.toml` as the Pages Functions configuration source of
 - `src/lib/api.ts` centralizes cookie credentials, CSRF headers, JSON errors and optional 404/503 fallbacks.
 - Forms use React Hook Form and Zod validation; notifications use Sonner.
 - Theme preference persists in browser storage.
-- The initial schema supports users, sessions, audits and site settings. Member registration also records academic details through migration `0002_member_registration.sql`. New registrations remain pending until an administrator approval flow is implemented.
+- The initial schema supports users, sessions, audits and site settings. Member registration records academic details through migration `0002_member_registration.sql`; migration `0003_super_admin_role.sql` enables the initial super-admin role. New registrations remain pending until an administrator approval flow is implemented.
 
 Other domain APIs are typed in `src/types/` and the frontend is prepared to connect to those endpoints as they are implemented. See `AGENTS.md` for the remaining module plan.

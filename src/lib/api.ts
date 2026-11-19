@@ -37,7 +37,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     : await response.text().catch(() => undefined);
   if (!response.ok) {
     const body = payload && typeof payload === 'object' ? payload as { error?: string; message?: string } : undefined;
-    const message = body?.error ?? body?.message ?? (typeof payload === 'string' ? payload : `Request failed (${response.status}).`);
+    const message = body?.error ?? body?.message ?? (typeof payload === 'string' && contentType.includes('application/json') ? payload : `Request failed (${response.status}).`);
     if (response.status === 404 || response.status === 503 || response.status === 502) throw new ApiUnavailableError(response.status, message);
     throw new ApiError(message, response.status, payload);
   }

@@ -1,4 +1,4 @@
-export interface Env { DB: D1Database }
+export interface Env { DB: D1Database; SETUP_TOKEN?: string }
 export const json = (data: unknown, status = 200, headers: HeadersInit = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 export const fail = (message: string, status = 400) => json({ error: message }, status);
 export const randomId = () => crypto.randomUUID();
