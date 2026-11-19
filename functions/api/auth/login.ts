@@ -35,9 +35,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return fail('Sign in could not verify the password hash. Check the password_hash value and the auth/login Function log.', 500);
   }
   if (user.status !== 'active') return fail('Your account is awaiting approval or is unavailable.', 403);
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) {
+    console.error('Login session creation failed: SESSION_SECRET is missing or shorter than 32 characters.');
+    return fail('Sign-in session security is not configured. Add SESSION_SECRET as a Cloudflare Pages secret with at least 32 characters, then redeploy.', 503);
+  }
 
   try {
-    if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) throw new Error('SESSION_SECRET is missing or too short');
     await env.DB.prepare('DELETE FROM login_attempts WHERE attempt_key=?').bind(attemptKey).run();
     const token = await signSessionToken(randomId(), env.SESSION_SECRET);
     const expiry = new Date(Date.now() + 7 * 86400000).toISOString();
