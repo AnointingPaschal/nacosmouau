@@ -74,8 +74,9 @@ async function addCandidate(request: Request, env: Env, user: Staff, id: string)
   let reg = text(body?.matric_number, 60).replace(/\s+/g, '').toUpperCase(); if (/^\d{2}\/\d{3,7}$/.test(reg)) reg = `MOUAU/CMP/${reg}`;
   const member = await env.DB.prepare("SELECT id,full_name FROM users WHERE matric_number=? AND status='active'").bind(reg).first<{ id: string; full_name: string }>();
   if (!member) return fail('No active member has that matric or registration number.', 404);
-  const photo = body?.photo_url ? fileKey(body.photo_url) : null;
+  let photo = body?.photo_url ? fileKey(body.photo_url) : null;
   if (body?.photo_url && !photo) return fail('Upload the contestant photo with the file picker.');
+  if (!photo) photo = (await env.DB.prepare('SELECT profile_photo_key FROM member_profiles WHERE user_id=?').bind(member.id).first<{ profile_photo_key: string | null }>())?.profile_photo_key ?? null;
   const candidateId = randomId(); const status = election.form_fee_minor > 0 ? 'pending_payment' : 'pending_screening';
   try {
     await env.DB.prepare('INSERT INTO election_candidates(id,election_id,position_id,user_id,display_name,manifesto,photo_key,status) VALUES(?,?,?,?,?,?,?,?)')
@@ -96,6 +97,7 @@ async function screen(request: Request, env: Env, user: Staff, id: string, candi
     if (!paid) return fail('This contestant has not paid for the candidate form yet.', 409);
   }
   await env.DB.prepare('UPDATE election_candidates SET status=?,screening_note=? WHERE id=?').bind(status, text(body?.note, 400) || null, candidateId).run();
+  if (status === 'eligible') await env.DB.prepare('UPDATE election_candidates SET photo_key=(SELECT profile_photo_key FROM member_profiles WHERE user_id=election_candidates.user_id) WHERE id=? AND photo_key IS NULL').bind(candidateId).run();
   await audit(env, user.id, 'screen', 'election_candidates', candidateId, { status });
   return json({ ok: true });
 }

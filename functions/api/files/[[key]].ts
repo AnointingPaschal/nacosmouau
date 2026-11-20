@@ -13,7 +13,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, request, env, w
   const profile = await env.DB.prepare('SELECT user_id FROM member_profiles WHERE profile_photo_key=?').bind(key).first<{ user_id: string }>();
   if (profile) {
     const user = await currentUser(request, env);
-    if (!user || user.status !== 'active' || (user.id !== profile.user_id && !(await hasPermission(env, user, 'members', 'read')))) return fail('This profile image is private.', 403);
+    const onBallot = user && user.status === 'active'
+      ? await env.DB.prepare("SELECT 1 AS ok FROM election_candidates c JOIN elections e ON e.id=c.election_id WHERE c.photo_key=? AND c.status='eligible' AND e.status IN ('voting','closed') LIMIT 1").bind(key).first()
+      : null;
+    if (!user || user.status !== 'active' || (user.id !== profile.user_id && !onBallot && !(await hasPermission(env, user, 'members', 'read')))) return fail('This profile image is private.', 403);
   }
   const proof = await env.DB.prepare('SELECT user_id FROM payments WHERE proof_key=?').bind(key).first<{ user_id: string }>();
   if (proof) {
