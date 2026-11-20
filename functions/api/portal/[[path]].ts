@@ -141,7 +141,7 @@ async function electionList(env: Env, user: Me) {
   ]);
   const out = [];
   for (const election of elections) {
-    const mine = await env.DB.prepare('SELECT c.id,c.status,c.screening_note,c.display_name,c.manifesto,c.photo_key,p.title AS position FROM election_candidates c JOIN election_positions p ON p.id=c.position_id WHERE c.election_id=? AND c.user_id=?').bind(election.id, user.id).all();
+    const mine = await env.DB.prepare(`SELECT c.id,c.status,c.screening_note,c.display_name,c.manifesto,c.photo_key,p.title AS position,(SELECT p2.status FROM payments p2 WHERE p2.ref_id=c.id AND p2.purpose='candidate_form' ORDER BY (p2.status='successful') DESC,(p2.status='pending') DESC,p2.created_at DESC LIMIT 1) payment_status,(SELECT p3.review_note FROM payments p3 WHERE p3.ref_id=c.id AND p3.purpose='candidate_form' AND p3.status='failed' ORDER BY p3.created_at DESC LIMIT 1) payment_note FROM election_candidates c JOIN election_positions p ON p.id=c.position_id WHERE c.election_id=? AND c.user_id=?`).bind(election.id, user.id).all();
     const voted = await env.DB.prepare('SELECT 1 FROM election_voters WHERE election_id=? AND user_id=?').bind(election.id, user.id).first();
     out.push({ ...election, my_candidacies: (mine.results ?? []).map((c: Record<string, unknown>) => ({ ...c, photo_url: c.photo_key ? `/api/files/${c.photo_key}` : null, photo_key: undefined })), has_voted: Boolean(voted) });
   }
@@ -168,7 +168,7 @@ async function electionDetail(env: Env, user: Me, id: string) {
   const grouped = (positions.results ?? []).map(p => ({ ...p, candidates: (candidates.results ?? []).filter(c => c.position_id === p.id).map(c => ({ id: c.id, display_name: c.display_name, manifesto: c.manifesto, photo_url: publicPhoto(c.photo_key) })) }));
   const [me, mine] = await Promise.all([
     env.DB.prepare('SELECT academic_level FROM users WHERE id=?').bind(user.id).first<{ academic_level: string | null }>(),
-    env.DB.prepare('SELECT id,position_id,status,screening_note,display_name,manifesto,photo_key FROM election_candidates WHERE election_id=? AND user_id=?').bind(id, user.id).all<Record<string, unknown>>(),
+    env.DB.prepare(`SELECT c.id,c.position_id,c.status,c.screening_note,c.display_name,c.manifesto,c.photo_key,(SELECT p2.status FROM payments p2 WHERE p2.ref_id=c.id AND p2.purpose='candidate_form' ORDER BY (p2.status='successful') DESC,(p2.status='pending') DESC,p2.created_at DESC LIMIT 1) payment_status,(SELECT p3.review_note FROM payments p3 WHERE p3.ref_id=c.id AND p3.purpose='candidate_form' AND p3.status='failed' ORDER BY p3.created_at DESC LIMIT 1) payment_note FROM election_candidates c WHERE c.election_id=? AND c.user_id=?`).bind(id, user.id).all<Record<string, unknown>>(),
   ]);
   const out: Record<string, unknown> = {
     election, positions: grouped, can_vote: !reason, reason, has_voted: Boolean(voted), dues_paid: paid,

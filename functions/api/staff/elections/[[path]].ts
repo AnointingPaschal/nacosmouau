@@ -88,40 +88,15 @@ async function addCandidate(request: Request, env: Env, user: Staff, id: string)
   if (!member) return fail('No active member has that matric or registration number.', 404);
   const memberLevel = (await env.DB.prepare('SELECT academic_level FROM users WHERE id=?').bind(member.id).first<{ academic_level: string | null }>())?.academic_level ?? null;
   if (!canContest(position?.eligible_levels ?? null, memberLevel)) return fail(`${position?.title} is open to ${position?.eligible_levels?.split(',').join(', ')} level members only.`, 409);
-  let photo = body?.photo_url ? fileKey(body.photo_url) : null;
-  if (body?.photo_url && !photo) return fail('Upload the contestant photo with the file picker.');
+  let photo: string | null = null;
   if (!photo) photo = (await env.DB.prepare('SELECT profile_photo_key FROM member_profiles WHERE user_id=?').bind(member.id).first<{ profile_photo_key: string | null }>())?.profile_photo_key ?? null;
   const candidateId = randomId(); const status = election.form_fee_minor > 0 ? 'pending_payment' : 'pending_screening';
   try {
     await env.DB.prepare('INSERT INTO election_candidates(id,election_id,position_id,user_id,display_name,manifesto,photo_key,status) VALUES(?,?,?,?,?,?,?,?)')
-      .bind(candidateId, id, positionId, member.id, member.full_name, text(body?.manifesto, 3000) || 'Manifesto to be provided.', photo, status).run();
+      .bind(candidateId, id, positionId, member.id, member.full_name, 'Manifesto to be provided.', photo, status).run();
   } catch { return fail('This member is already a contestant for that position.', 409); }
   await audit(env, user.id, 'create', 'election_candidates', candidateId, { election: id, member: member.id });
   return json({ id: candidateId, status }, 201);
-}
-
-async function editCandidate(request: Request, env: Env, user: Staff, id: string, candidateId: string) {
-  const row = await env.DB.prepare('SELECT c.position_id,c.user_id,e.status AS election_status FROM election_candidates c JOIN elections e ON e.id=c.election_id WHERE c.id=? AND c.election_id=?').bind(candidateId, id).first<{ position_id: string; user_id: string | null; election_status: string }>();
-  if (!row) return fail('Contestant not found.', 404);
-  const body = await readBody(request); const sets: string[] = []; const vals: unknown[] = []; const locked = row.election_status === 'voting' || row.election_status === 'closed';
-  if (body?.display_name !== undefined) { const n = text(body.display_name, 120); if (n.length < 2) return fail('Enter the contestant name.'); sets.push('display_name=?'); vals.push(n); }
-  if (body?.manifesto !== undefined) { const t = text(body.manifesto, 3000); if (!t) return fail('Enter a manifesto.'); sets.push('manifesto=?'); vals.push(t); }
-  if (body?.photo_url !== undefined) {
-    if (body.photo_url === '' || body.photo_url === null) { sets.push('photo_key=NULL'); }
-    else { const key = fileKey(body.photo_url); if (!key) return fail('Upload the passport with the file picker.'); sets.push('photo_key=?'); vals.push(key); }
-  }
-  if (body?.position_id !== undefined && String(body.position_id) !== row.position_id) {
-    if (locked) return fail('The position cannot change once voting has started.', 409);
-    const pos = await env.DB.prepare('SELECT title,eligible_levels FROM election_positions WHERE id=? AND election_id=?').bind(String(body.position_id), id).first<{ title: string; eligible_levels: string | null }>();
-    if (!pos) return fail('Choose a valid position.');
-    const level = row.user_id ? (await env.DB.prepare('SELECT academic_level FROM users WHERE id=?').bind(row.user_id).first<{ academic_level: string | null }>())?.academic_level ?? null : null;
-    if (row.user_id && !canContest(pos.eligible_levels, level)) return fail(`${pos.title} is open to ${pos.eligible_levels?.split(',').join(', ')} level members only.`, 409);
-    sets.push('position_id=?'); vals.push(pos ? String(body.position_id) : row.position_id);
-  }
-  if (!sets.length) return fail('Nothing to update.');
-  try { await env.DB.prepare(`UPDATE election_candidates SET ${sets.join(',')} WHERE id=?`).bind(...vals, candidateId).run(); } catch { return fail('That member is already a contestant for that position.', 409); }
-  await audit(env, user.id, 'update', 'election_candidates', candidateId, { fields: Object.keys(body ?? {}) });
-  return json({ ok: true });
 }
 
 async function screen(request: Request, env: Env, user: Staff, id: string, candidateId: string) {
@@ -173,7 +148,6 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (id && sub === 'positions' && subId && m === 'DELETE') { await env.DB.prepare('DELETE FROM election_positions WHERE id=? AND election_id=?').bind(subId, id).run(); return json({ ok: true }); }
     if (id && sub === 'candidates' && !subId && m === 'POST') return await addCandidate(request, env, user, id);
     if (id && sub === 'candidates' && subId && m === 'PATCH') return await screen(request, env, user, id, subId);
-    if (id && sub === 'candidates' && subId && m === 'PUT') return await editCandidate(request, env, user, id, subId);
     if (id && sub === 'candidates' && subId && m === 'DELETE') {
       const el = await env.DB.prepare('SELECT status FROM elections WHERE id=?').bind(id).first<{ status: string }>();
       if (el && (el.status === 'voting' || el.status === 'closed')) return fail('Contestants cannot be removed once voting has started.', 409);

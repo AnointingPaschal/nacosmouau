@@ -1,12 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Check, Pencil, Plus, Trash2, Vote, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Plus, Trash2, Vote, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/api';
 import { fromKobo, naira, toKobo, when } from '../../lib/money';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
-import { FileUpload } from '../../components/FileUpload';
 import { PageTitle, Panel, Pill, Stat } from '../../components/Workspace';
 import { LiveResults } from '../../components/LiveResults';
 
@@ -56,16 +55,6 @@ function EditPosition({ electionId, position, onClose, onDone }: { electionId: s
     <LevelPicker value={levels} onChange={setLevels}/>
     <footer><button type="button" className="button button-outline" onClick={onClose}>Cancel</button><button className="button button-green" disabled={busy}>Save</button></footer></form></section></div>;
 }
-function EditContestant({ electionId, cand, positions, locked, onClose, onDone }: { electionId: string; cand: Cand; positions: Detail['positions']; locked: boolean; onClose: () => void; onDone: () => void }) {
-  const [f, setF] = useState({ display_name: cand.display_name, manifesto: cand.manifesto, position_id: cand.position_id, photo: '' }); const [busy, setBusy] = useState(false);
-  const save = async (e: FormEvent) => { e.preventDefault(); setBusy(true); try { await api.put(`staff/elections/${electionId}/candidates/${cand.id}`, { display_name: f.display_name, manifesto: f.manifesto, ...(locked ? {} : { position_id: f.position_id }), ...(f.photo ? { photo_url: f.photo } : {}) }); toast.success('Contestant updated'); onDone(); onClose(); } catch (err) { toast.error(err instanceof Error ? err.message : 'Could not save'); } finally { setBusy(false); } };
-  return <div className="modal-scrim" role="presentation"><section className="workspace-panel crud-modal" role="dialog" aria-modal="true"><h2>Edit contestant</h2><form className="form-stack" onSubmit={save}>
-    <label className="field"><span>Name on the ballot</span><input value={f.display_name} onChange={e => setF(v => ({ ...v, display_name: e.target.value }))} required minLength={2}/></label>
-    <label className="field"><span>Position</span><select value={f.position_id} disabled={locked} onChange={e => setF(v => ({ ...v, position_id: e.target.value }))}>{positions.map(p => <option key={p.id} value={p.id}>{p.title} ({levelText(p.eligible_levels)})</option>)}</select></label>
-    <label className="field"><span>Manifesto</span><textarea rows={5} value={f.manifesto} onChange={e => setF(v => ({ ...v, manifesto: e.target.value }))} required/></label>
-    <div className="field"><span>Passport</span><FileUpload value={f.photo || cand.photo_url} purpose="candidate" accept="image/jpeg,image/png,image/webp" label="Upload a new passport" onChange={u => setF(v => ({ ...v, photo: u?.url ?? '' }))}/></div>
-    <footer><button type="button" className="button button-outline" onClick={onClose}>Cancel</button><button className="button button-green" disabled={busy}>Save</button></footer></form></section></div>;
-}
 
 interface Cand { id: string; position_id: string; display_name: string; manifesto: string; photo_url: string | null; status: string; screening_note: string | null; matric_number: string | null; academic_level: string | null; payment_status: string | null }
 interface Detail { election: { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; live_results: number }; positions: Array<{ id: string; title: string; eligible_levels: string | null }>; candidates: Cand[] }
@@ -74,13 +63,13 @@ const NEXT: Record<string, { to: string; label: string }> = { draft: { to: 'nomi
 function ElectionDetail({ id }: { id: string }) {
   const client = useQueryClient();
   const q = useQuery({ queryKey: ['staff', 'elections', id], queryFn: ({ signal }) => api.get<Detail>(`staff/elections/${id}`, signal), retry: false });
-  const navigate = useNavigate(); const [pos, setPos] = useState(''); const [posLevels, setPosLevels] = useState<string[]>([...LEVELS]); const [editPos, setEditPos] = useState<Detail['positions'][number] | null>(null); const [editCand, setEditCand] = useState<Cand | null>(null); const [c, setC] = useState({ position_id: '', matric_number: '', manifesto: '', photo: '' }); const [busy, setBusy] = useState(false);
+  const navigate = useNavigate(); const [pos, setPos] = useState(''); const [posLevels, setPosLevels] = useState<string[]>([...LEVELS]); const [editPos, setEditPos] = useState<Detail['positions'][number] | null>(null); const [c, setC] = useState({ position_id: '', matric_number: '', manifesto: '', photo: '' }); const [busy, setBusy] = useState(false);
   const refresh = () => client.invalidateQueries({ queryKey: ['staff', 'elections'] });
   if (q.isLoading) return <LoadingState/>;
   if (q.error || !q.data) return <ErrorState error={q.error}/>;
   const { election, positions, candidates } = q.data; const locked = election.status === 'voting' || election.status === 'closed'; const next = NEXT[election.status];
   const run = async (fn: () => Promise<unknown>, ok: string) => { try { await fn(); toast.success(ok); await refresh(); } catch (e) { toast.error(e instanceof Error ? e.message : 'That did not work'); } };
-  const addCandidate = async (e: FormEvent) => { e.preventDefault(); setBusy(true); await run(() => api.post(`staff/elections/${id}/candidates`, { position_id: c.position_id || positions[0]?.id, matric_number: c.matric_number, manifesto: c.manifesto, photo_url: c.photo || undefined }), 'Contestant added'); setC(v => ({ ...v, matric_number: '', manifesto: '', photo: '' })); setBusy(false); };
+  const addCandidate = async (e: FormEvent) => { e.preventDefault(); setBusy(true); await run(() => api.post(`staff/elections/${id}/candidates`, { position_id: c.position_id || positions[0]?.id, matric_number: c.matric_number }), 'Contestant added'); setC(v => ({ ...v, matric_number: '' })); setBusy(false); };
   return <>
     <PageTitle eyebrow="ELECTION" title={election.title} description={election.description ?? undefined} action={<Link className="text-action" to="/admin/elections"><ArrowLeft size={14}/> All elections</Link>}/>
     <div className="count-grid">
@@ -110,8 +99,7 @@ function ElectionDetail({ id }: { id: string }) {
         <form className="form-stack" onSubmit={addCandidate}>
           <label className="field"><span>Position</span><select value={c.position_id || positions[0]?.id || ''} onChange={e => setC(v => ({ ...v, position_id: e.target.value }))} required>{positions.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
           <label className="field"><span>Member's matric or reg. number</span><input value={c.matric_number} onChange={e => setC(v => ({ ...v, matric_number: e.target.value }))} placeholder="26/103328 or MOUAU/CMP/26/103328" required/></label>
-          <label className="field"><span>Manifesto (optional)</span><textarea rows={3} value={c.manifesto} onChange={e => setC(v => ({ ...v, manifesto: e.target.value }))}/></label>
-          <div className="field"><span>Photo (optional)</span><FileUpload value={c.photo} accept="image/jpeg,image/png,image/webp" label="Upload contestant photo" onChange={f => setC(v => ({ ...v, photo: f?.url ?? '' }))}/></div>
+          <p className="form-note">The contestant adds their own passport and manifesto from their portal.</p>
           <button className="button button-green" disabled={busy || positions.length === 0}>{election.form_fee_minor > 0 ? 'Add contestant (they pay the form fee)' : 'Add contestant'}</button>
         </form>
       </Panel>}
@@ -121,15 +109,14 @@ function ElectionDetail({ id }: { id: string }) {
         positions.map(p => { const list = candidates.filter(x => x.position_id === p.id); return list.length === 0 ? null : <div key={p.id} className="position-block"><h3>{p.title}</h3><div className="record-list">{list.map(x => <article className="member-row" key={x.id}>
           <span className="cand-thumb">{x.photo_url ? <img src={x.photo_url} alt=""/> : <b>{x.display_name[0]}</b>}</span>
           <div className="member-info"><strong>{x.display_name}</strong><span className="mono">{x.matric_number ?? '—'}{x.academic_level ? ` · ${x.academic_level}L` : ''}</span><span>Form: {election.form_fee_minor > 0 ? (x.payment_status === 'successful' ? 'Paid' : x.payment_status === 'pending' ? 'Teller awaiting approval' : 'Not paid') : 'No fee'}</span>{x.screening_note && <span>Note: {x.screening_note}</span>}</div>
-          <div className="member-actions"><Pill value={x.status}/>
-            <button className="button button-outline btn-sm" onClick={() => setEditCand(x)}><Pencil size={14}/> Edit</button>
-            {!locked && x.status !== 'eligible' && <button className="button button-green btn-sm" onClick={() => void run(() => api.patch(`staff/elections/${id}/candidates/${x.id}`, { status: 'eligible' }), 'Marked eligible')}><Check size={14}/> Eligible</button>}
+          <div className="member-actions"><Pill value={x.status === 'pending_payment' && x.payment_status === 'pending' ? 'awaiting_approval' : x.status}/>
+            {x.payment_status === 'pending' && <Link className="button button-outline btn-sm" to="/admin/payments">Review teller</Link>}
+            {!locked && x.status !== 'eligible' && (election.form_fee_minor <= 0 || x.payment_status === 'successful') && <button className="button button-green btn-sm" onClick={() => void run(() => api.patch(`staff/elections/${id}/candidates/${x.id}`, { status: 'eligible' }), 'Marked eligible')}><Check size={14}/> Eligible</button>}
             {!locked && x.status !== 'rejected' && <button className="button button-outline btn-sm" onClick={() => { const note = window.prompt('Reason for rejecting this contestant (shown to them):'); if (note) void run(() => api.patch(`staff/elections/${id}/candidates/${x.id}`, { status: 'rejected', note }), 'Contestant rejected'); }}><X size={14}/> Reject</button>}
             {!locked && <button className="icon-button" aria-label={`Remove ${x.display_name}`} onClick={() => { if (window.confirm(`Remove ${x.display_name}?`)) void run(() => api.delete(`staff/elections/${id}/candidates/${x.id}`), 'Contestant removed'); }}><Trash2 size={15}/></button>}
           </div></article>)}</div></div>; })}
     </Panel>
     {editPos && <EditPosition electionId={id} position={editPos} onClose={() => setEditPos(null)} onDone={() => void refresh()}/>}
-    {editCand && <EditContestant electionId={id} cand={editCand} positions={positions} locked={locked} onClose={() => setEditCand(null)} onDone={() => void refresh()}/>}
     {(election.status === 'voting' || election.status === 'closed') && <LiveResults path={`staff/elections/${id}/results`} queryKey={['staff', 'elections', id, 'results']} live={election.status === 'voting'} closed={election.status === 'closed'} title={election.status === 'closed' ? 'Final results' : 'Live results (admin view)'}/>}
   </>;
 }

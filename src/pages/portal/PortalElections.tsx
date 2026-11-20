@@ -8,7 +8,7 @@ import { naira, when } from '../../lib/money';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel, Pill } from '../../components/Workspace';
 import { LiveResults } from '../../components/LiveResults';
-import { CandidacyFlow, PhaseSteps, levelsText, type Candidacy, type Position } from './Candidacy';
+import { CandidacyFlow, PhaseSteps, candidacyState, levelsText, type Candidacy, type Position } from './Candidacy';
 
 interface ElectionRow { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; my_candidacies: Candidacy[]; has_voted: boolean }
 interface ElectionList { session: string; dues_paid: boolean; elections: ElectionRow[] }
@@ -31,7 +31,7 @@ export function PortalElections() {
             <div><dt><CalendarClock size={13}/> Voting</dt><dd>{when(e.opens_at)} to {when(e.closes_at)}</dd></div>
             <div><dt><Ticket size={13}/> Candidate form</dt><dd>{e.form_fee_minor > 0 ? naira(e.form_fee_minor) : 'Free'}</dd></div>
           </dl>
-          {e.my_candidacies.map(c => <div className="my-candidacy" key={c.id}><span>You applied for <b>{c.position}</b></span><Pill value={c.status}/></div>)}
+          {e.my_candidacies.map(c => <div className="my-candidacy" key={c.id}><span>You applied for <b>{c.position}</b></span><Pill value={candidacyState(c)}/></div>)}
           <div className="election-actions">
             {e.status === 'nominations' && <Link className="button button-green" to={`/portal/elections/${e.id}`}>{e.my_candidacies.length ? 'Continue application' : 'Apply to contest'} <ArrowRight size={15}/></Link>}
             {e.status === 'voting' && (e.has_voted ? <span className="voted-chip"><Check size={14}/> You have voted</span> : <Link className="button button-green" to={`/portal/elections/${e.id}`}>Vote now <ArrowRight size={15}/></Link>)}

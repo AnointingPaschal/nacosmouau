@@ -7,8 +7,9 @@ import { FileUpload } from '../../components/FileUpload';
 import { Pill } from '../../components/Workspace';
 import { PayPanel, usePayInfo } from './PayPanel';
 
-export interface Candidacy { id: string; status: string; screening_note: string | null; position: string; manifesto: string; photo_url: string | null }
+export interface Candidacy { id: string; status: string; screening_note: string | null; position: string; manifesto: string; photo_url: string | null; payment_status?: string | null; payment_note?: string | null }
 export interface Position { id: string; title: string; eligible_levels: string | null }
+export const candidacyState = (c: { status: string; payment_status?: string | null }) => (c.status === 'pending_payment' && c.payment_status === 'pending' ? 'awaiting_approval' : c.status);
 export const levelsText = (v: string | null) => (v ? `${v.split(',').join(', ')} level` : 'All levels');
 const PLACEHOLDER = 'Manifesto to be provided.';
 
@@ -35,10 +36,10 @@ function CandidacyEditor({ candidacy, onSaved }: { candidacy: Candidacy; onSaved
 /** Everything a contestant has to do, in order: buy the form, add passport and manifesto, wait for screening. */
 export function CandidacyFlow({ candidacy, fee, editable, onChanged }: { candidacy: Candidacy; fee: number; editable: boolean; onChanged: () => void }) {
   const info = usePayInfo(); const [paying, setPaying] = useState(false);
-  const bought = candidacy.status !== 'pending_payment'; const profileDone = Boolean(candidacy.photo_url) && candidacy.manifesto !== PLACEHOLDER;
+  const reviewing = candidacy.status === 'pending_payment' && candidacy.payment_status === 'pending'; const bought = candidacy.status !== 'pending_payment' || reviewing; const profileDone = Boolean(candidacy.photo_url) && candidacy.manifesto !== PLACEHOLDER;
   const cleared = candidacy.status === 'eligible'; const rejected = candidacy.status === 'rejected';
   const steps = [
-    { icon: Receipt, label: 'Buy form', done: bought },
+    { icon: Receipt, label: reviewing ? 'Form paid (under review)' : 'Buy form', done: bought },
     { icon: Camera, label: 'Passport and manifesto', done: profileDone },
     { icon: ScanSearch, label: 'Screening', done: cleared },
     { icon: BadgeCheck, label: 'Cleared', done: cleared },
@@ -48,11 +49,13 @@ export function CandidacyFlow({ candidacy, fee, editable, onChanged }: { candida
     try { await api.post(`portal/candidacy/${candidacy.id}/withdraw`, {}); toast.success('Application withdrawn'); onChanged(); } catch (e) { toast.error(e instanceof Error ? e.message : 'Could not withdraw'); }
   };
   return <div className="candidacy-flow">
-    <div className="candidacy-head"><div><strong>{candidacy.position}</strong><small>Your application</small></div><Pill value={candidacy.status}/></div>
+    <div className="candidacy-head"><div><strong>{candidacy.position}</strong><small>Your application</small></div><Pill value={candidacyState(candidacy)}/></div>
     <ol className="flow-steps">{steps.map(({ icon: Icon, label, done }, i) => <li key={label} className={done ? 'is-done' : ''}><span><Icon size={15}/></span><b>{i + 1}. {label}</b></li>)}</ol>
     {candidacy.screening_note && <p className="notice-bar"><FileSignature size={15}/><span>Committee note: {candidacy.screening_note}</span></p>}
-    {candidacy.status === 'pending_payment' && <div className="flow-card">
+    {reviewing && <p className="notice-bar notice-ok"><ScanSearch size={15}/><span>Your teller was received. You will be notified once it is approved, then the committee screens your application.</span></p>}
+    {candidacy.status === 'pending_payment' && !reviewing && <div className="flow-card">
       <h3><Ticket size={16}/> Step 1: buy your candidate form</h3>
+      {candidacy.payment_status === 'failed' && <p className="notice-bar"><Lock size={15}/><span>Your last payment was not approved{candidacy.payment_note ? `: ${candidacy.payment_note}` : '.'} Please pay again.</span></p>}
       <p className="form-note">The form costs <b>{naira(fee)}</b>. Pay by Paystack or upload your bank teller, then the electoral committee can screen you.</p>
       {paying && info.data ? <PayPanel purpose="candidate_form" refId={candidacy.id} amountMinor={fee} info={info.data} onDone={() => { setPaying(false); onChanged(); }}/> : <div className="row-right" style={{ justifyContent: 'flex-start' }}><button className="button button-green" onClick={() => setPaying(true)}>Buy form for {naira(fee)}</button><button className="button button-outline btn-sm" onClick={() => void withdraw()}>Withdraw</button></div>}
     </div>}
