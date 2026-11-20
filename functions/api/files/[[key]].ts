@@ -15,6 +15,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, request, env, w
     const user = await currentUser(request, env);
     if (!user || user.status !== 'active' || (user.id !== profile.user_id && !(await hasPermission(env, user, 'members', 'read')))) return fail('This profile image is private.', 403);
   }
+  const proof = await env.DB.prepare('SELECT user_id FROM payments WHERE proof_key=?').bind(key).first<{ user_id: string }>();
+  if (proof) {
+    const user = await currentUser(request, env);
+    if (!user || user.status !== 'active' || (user.id !== proof.user_id && !(await hasPermission(env, user, 'payments', 'read')))) return fail('This payment proof is private.', 403);
+  }
   if (record.mime_type === 'application/pdf' || record.mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     const access = await env.DB.prepare('SELECT visibility FROM documents WHERE object_key=?').bind(key).first<{ visibility: string }>();
     if (!access || access.visibility !== 'public') {
@@ -23,7 +28,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, request, env, w
     }
   }
 
-  const publicImage = !profile && isPublicImage(record.mime_type);
+  const publicImage = !profile && !proof && isPublicImage(record.mime_type);
   const cache = (globalThis as unknown as { caches?: { default: Cache } }).caches?.default;
   if (publicImage && cache) {
     const hit = await cache.match(request);

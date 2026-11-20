@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type TouchEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { HeroSlide } from '../types/content';
 import { LoadingState } from './States';
+import { useSession } from '../hooks/useSession';
 
 // Chapter imagery is served from this site (public/hero) so it loads on any phone or network,
 // instead of depending on a third-party host. Administrator slides replace these once published.
@@ -10,7 +11,7 @@ const welcomeSlides: HeroSlide[] = [
   {
     id: 'welcome-community',
     image_url: '/hero/carousel-2-1600.jpg',
-    badge: 'MOUAU Chapter · 2025/2026',
+    badge: 'MOUAU Chapter · {{session}}',
     title: 'Computing minds.\nOne community.',
     subtitle: 'A digital home for NACOS students at Michael Okpara University of Agriculture, Umudike.',
     primary_cta_text: 'Become a member', primary_cta_link: '/register',
@@ -62,6 +63,7 @@ function SlidePhoto({ slide, active, first }: { slide: HeroSlide; active: boolea
 }
 
 export function HeroSlider({ slides, isLoading = false }: { slides?: HeroSlide[]; isLoading?: boolean }) {
+  const { session } = useSession();
   const published = (slides ?? []).filter(slide => slide.is_active).sort((a, b) => a.display_order - b.display_order);
   const slidesToShow = published.length ? published : welcomeSlides;
   const [index, setIndex] = useState(0);
@@ -95,7 +97,7 @@ export function HeroSlider({ slides, isLoading = false }: { slides?: HeroSlide[]
     <div className="hx-overlay"/>
     <div className="hx-inner">
       <div className="hx-copy" key={slide.id}>
-        {slide.badge && <span className="hx-badge">{slide.badge}</span>}
+        {slide.badge && <span className="hx-badge">{slide.badge.replace('{{session}}', session)}</span>}
         <h1>{titleLines.map((line, lineIndex) => <span key={`${slide.id}-${lineIndex}`} className={lineIndex > 0 ? 'hx-title-alt' : undefined}>{line}</span>)}</h1>
         <p>{slide.subtitle}</p>
         <div className="hx-actions">{slide.primary_cta_text && <Action href={slide.primary_cta_link || '/register'}>{slide.primary_cta_text}</Action>}{slide.secondary_cta_text && <Action secondary href={slide.secondary_cta_link || '/verify'}>{slide.secondary_cta_text}</Action>}</div>

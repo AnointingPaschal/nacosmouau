@@ -46,7 +46,7 @@ export const api = {
   put: <T, B = unknown>(path: string, body: B) => request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   patch: <T, B = unknown>(path: string, body: B) => request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
-  upload: <T>(file: File, onProgress?: (percent: number) => void, purpose: 'media'|'profile'|'document' = 'media') => new Promise<T>(async (resolve, reject) => {
+  upload: <T>(file: File, onProgress?: (percent: number) => void, purpose: 'media'|'profile'|'document'|'proof' = 'media') => new Promise<T>(async (resolve, reject) => {
     const xhr = new XMLHttpRequest(); const form = new FormData(); form.append('file', file); form.append('purpose', purpose); xhr.open('POST', '/api/upload'); xhr.withCredentials = true;
     xhr.upload.onprogress = event => { if (event.lengthComputable) onProgress?.(Math.round(event.loaded / event.total * 100)); };
     xhr.onerror = () => reject(new ApiUnavailableError(0, 'Could not reach the file service. Check your connection and try again.'));

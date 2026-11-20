@@ -8,13 +8,13 @@ export const onRequestPost: PagesFunction<Env> = async ({request,env}) => {
   const user=await currentUser(request,env); if(!user||user.status!=='active') return fail('Sign in with an active account to upload files.',401);
   let form: FormData; try { form=await request.formData(); } catch { return fail('Upload must use multipart form data.'); }
   const purpose=String(form.get('purpose')??'media');const file=form.get('file'); if(!(file instanceof File)) return fail('Choose a file to upload.');
-  if(purpose==='profile'){if(!file.type.toLowerCase().startsWith('image/'))return fail('Profile photos must be an image.');}else{const permissions=await Promise.all(['cms','executives','gallery','documents','events','achievements','members','settings'].map(resource=>hasPermission(env,user,resource,'create').catch(()=>false)));if(!permissions.some(Boolean))return fail('You do not have permission to upload association media.',403);}
+  if(purpose==='proof'){if(!(file.type.toLowerCase().startsWith('image/')||file.type==='application/pdf'))return fail('Upload a photo or PDF of your teller or transfer receipt.');}else if(purpose==='profile'){if(!file.type.toLowerCase().startsWith('image/'))return fail('Profile photos must be an image.');}else{const permissions=await Promise.all(['cms','executives','gallery','documents','events','achievements','members','settings'].map(resource=>hasPermission(env,user,resource,'create').catch(()=>false)));if(!permissions.some(Boolean))return fail('You do not have permission to upload association media.',403);}
   const mime=file.type.toLowerCase(), max= mime.startsWith('image/')?imageLimit:documentLimit, ext=extension(file.name,mime);
   if(!allowed.has(mime)||!ext) return fail('File type is not allowed. Use JPEG, PNG, WebP, PDF, or DOCX.');
   if(file.size<=0||file.size>max) return fail(`File exceeds the ${max/(1024*1024)} MB limit.`);
   const bytes=new Uint8Array(await file.arrayBuffer()); if(!matchesSignature(bytes,mime)) return fail('The file contents do not match its declared file type.');
-  const toGithub=isPublicImage(mime,purpose)&&githubEnabled(env);
-  if(!toGithub&&!env.BUCKET) return fail(isPublicImage(mime,purpose)?'Image storage is not configured. Add the GITHUB_TOKEN secret to Cloudflare Pages.':'Private files (documents and profile photos) need the R2 bucket, which is not configured.',503);
+  const privatePurpose=purpose==='profile'||purpose==='proof';const toGithub=!privatePurpose&&isPublicImage(mime,purpose)&&githubEnabled(env);
+  if(!toGithub&&!env.BUCKET) return fail(!privatePurpose&&isPublicImage(mime,purpose)?'Image storage is not configured. Add the GITHUB_TOKEN secret to Cloudflare Pages.':'Private files (documents and profile photos) need the R2 bucket, which is not configured.',503);
   const key=`uploads/${new Date().toISOString().slice(0,7)}/${randomId()}.${ext}`;
   const filename=file.name.replace(/[\r\n\0]/g,'').slice(0,180)||`upload.${ext}`;
   try {

@@ -18,6 +18,15 @@ This project uses `wrangler.jsonc` as the Pages Functions configuration source o
 
 Each event page can show a short summary, headline stats, an about section, a photo gallery with a full-screen viewer, videos with a featured highlight, and featured speakers. Manage all of it under Admin → Events: the **Event photos & videos** tab has a bulk photo uploader, and videos are links (YouTube, Vimeo or a direct `.mp4` URL). Apply `migrations/0007_event_details.sql` with `npx wrangler d1 migrations apply nacos-mouau --remote` before using these fields.
 
+## Member and admin portals
+
+- **Current session:** the admin sets it once under Admin → Settings. The site, registration, dues, elections and Digital ID all read it.
+- **Dues:** members pay NACOS dues with Paystack or upload a bank teller for approval. Set the dues amount and bank details in Admin → Settings.
+- **Paystack:** add `PAYSTACK_SECRET_KEY` as an encrypted Cloudflare Pages secret and set the webhook URL in your Paystack dashboard to `https://YOUR-SITE/api/webhooks/paystack`. Use Paystack test keys first.
+- **Elections:** admins create an election, add contestants (who pay a form fee), screen them, then open voting. Only members who have paid the current session's dues can vote.
+- **Roles:** Admin → Members lets admins filter by name, matric number and level, and give roles. Only a super administrator can grant Administrator roles.
+- Apply `migrations/0010_portal_payments_elections.sql` with `npx wrangler d1 migrations apply nacos-mouau --remote`.
+
 ## Manual initial administrator recovery
 
 If Wrangler cannot be installed, `python3 scripts/generate_admin_sql.py` can generate SQL for the first super administrator. Run it locally in Termux; the password is entered without echo and only the PBKDF2 hash is printed. Paste the generated statements into the authenticated Cloudflare D1 Console for the database bound to production. This is for an empty `users` table only; then verify the row and sign in at `/login?role=admin`. Never share or commit the generated SQL.

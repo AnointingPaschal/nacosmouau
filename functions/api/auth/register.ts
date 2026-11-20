@@ -1,4 +1,5 @@
 import { Env, fail, json, passwordHash, randomId } from './_shared';
+import { currentSession } from '../_portal';
 
 type RegistrationBody = {
   email?: string; password?: string; confirmPassword?: string; fullName?: string; phone?: string;
@@ -38,7 +39,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (duplicate?.matric_number === identifier) return fail(idType === 'jamb' ? 'This JAMB registration number is already registered.' : 'This matric number is already registered.', 409);
 
   const id = randomId();
-  await env.DB.prepare('INSERT INTO users (id,email,password_hash,full_name,phone,matric_number,academic_level) VALUES (?,?,?,?,?,?,?)')
-    .bind(id, email, await passwordHash(password), fullName, phone, identifier, academicLevel).run();
+  await env.DB.prepare('INSERT INTO users (id,email,password_hash,full_name,phone,matric_number,academic_level,academic_session) VALUES (?,?,?,?,?,?,?,?)')
+    .bind(id, email, await passwordHash(password), fullName, phone, identifier, academicLevel, await currentSession(env)).run();
   return json({ id, email, fullName, status: 'pending', message: 'Registration received. An administrator must approve your membership.' }, 201);
 };
