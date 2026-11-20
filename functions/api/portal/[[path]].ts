@@ -30,6 +30,7 @@ async function overview(env: Env, user: Me) {
 async function digitalId(env: Env, user: Me) {
   const session = await currentSession(env);
   const [me, membership, paid] = await Promise.all([profile(env, user), ensureMembership(env, user.id), duesPaid(env, user.id, session)]);
+  if (!me?.profile_photo_key) return json({ passport_required: true, full_name: me?.full_name });
   return json({ full_name: me?.full_name, matric_number: me?.matric_number, academic_level: me?.academic_level, status: me?.status, session, membership_id: membership?.membership_id ?? null, issued_at: membership?.started_at ?? null, dues_paid: paid, photo_url: me?.profile_photo_key ? `/api/files/${me.profile_photo_key}` : null });
 }
 
