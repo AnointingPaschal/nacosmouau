@@ -52,7 +52,7 @@ export function DigitalId() {
   const d = q.data;
   if (d.passport_required) return <PassportGate name={d.full_name}/>;
   const logo = settings.data?.logo_url; const paid = Boolean(d.dues_paid);
-  const head = <header className="idc-head" aria-hidden="false">
+  const head = <header className="idc-head">
     <span className="idc-logo">{logo ? <img src={logo} alt=""/> : 'N'}</span>
     <div className="idc-title"><b>NACOS</b><small>MOUAU CHAPTER</small></div>
     <span className="idc-session">{d.session}</span>
@@ -66,18 +66,23 @@ export function DigitalId() {
           {head}
           <div className="idc-body">
             <div className="idc-photo"><img src={d.photo_url ?? ''} alt={d.full_name}/></div>
-            <h2 className="idc-name">{d.full_name}</h2>
-            <span className="idc-role">NACOS MEMBER</span>
-            <dl className="idc-grid">
-              <div className="wide"><dt>Matric / Reg. number</dt><dd className="mono">{d.matric_number ?? '—'}</dd></div>
-              <div><dt>Level</dt><dd>{d.academic_level ? `${d.academic_level} Level` : '—'}</dd></div>
-              <div><dt>Session</dt><dd>{d.session}</dd></div>
-              <div className="wide"><dt>Membership ID</dt><dd className="mono">{d.membership_id ?? 'Pending'}</dd></div>
-            </dl>
-          </div>
-          <div className="idc-verify">
-            <span className="idc-qr">{qr ? <img src={qr} alt={`QR code to verify ${d.membership_id}`}/> : null}</span>
-            <div><small>SCAN TO VERIFY</small><span className={`idc-dues ${paid ? 'is-paid' : 'is-unpaid'}`}>{paid ? <><BadgeCheck size={14}/> Dues paid</> : <><ShieldAlert size={14}/> Dues unpaid</>}</span></div>
+            <div className="idc-info">
+              <h2 className="idc-name">{d.full_name}</h2>
+              <div className="idc-row">
+                <dl className="idc-fields">
+                  <div><dt>Matric / Reg. no.</dt><dd className="mono">{d.matric_number ?? '—'}</dd></div>
+                  <div className="idc-pair">
+                    <div><dt>Level</dt><dd>{d.academic_level ? `${d.academic_level} Level` : '—'}</dd></div>
+                    <div><dt>Status</dt><dd>{d.status === 'active' ? 'Active' : d.status}</dd></div>
+                  </div>
+                  <div><dt>Membership ID</dt><dd className="mono">{d.membership_id ?? 'Pending'}</dd></div>
+                </dl>
+                <div className="idc-qrcol">
+                  <span className="idc-qr">{qr ? <img src={qr} alt={`QR code to verify ${d.membership_id}`}/> : null}</span>
+                  <span className={`idc-dues ${paid ? 'is-paid' : 'is-unpaid'}`}>{paid ? <><BadgeCheck/> Dues paid</> : <><ShieldAlert/> Dues unpaid</>}</span>
+                </div>
+              </div>
+            </div>
           </div>
           <footer className="idc-foot">Michael Okpara University of Agriculture, Umudike</footer>
         </article>
@@ -85,15 +90,19 @@ export function DigitalId() {
           {head}
           <div className="idc-body idc-rear-body">
             <span className="idc-qr idc-qr-lg">{qr ? <img src={qr} alt="Verification QR code"/> : null}</span>
-            <h3>Verify this member</h3>
-            <p>Scan the code, or open <b>/verify</b> and enter the membership ID, to confirm this card is genuine and active.</p>
-            <dl className="idc-grid">
-              <div className="wide"><dt>Membership ID</dt><dd className="mono">{d.membership_id ?? '—'}</dd></div>
-              <div><dt>Member since</dt><dd>{when(d.issued_at ?? null)}</dd></div>
-              <div><dt>Status</dt><dd>{d.status === 'active' ? 'Active member' : d.status}</dd></div>
-            </dl>
+            <div className="idc-info">
+              <h3>Verify this member</h3>
+              <p>Scan the code, or open <b>/verify</b> and enter the membership ID to confirm this card is genuine.</p>
+              <dl className="idc-fields">
+                <div><dt>Membership ID</dt><dd className="mono">{d.membership_id ?? '—'}</dd></div>
+                <div className="idc-pair">
+                  <div><dt>Member since</dt><dd>{when(d.issued_at ?? null).split(',')[0]}</dd></div>
+                  <div><dt>Session</dt><dd>{d.session}</dd></div>
+                </div>
+              </dl>
+            </div>
           </div>
-          <footer className="idc-foot">NACOS MOUAU Chapter · Valid only while membership is active</footer>
+          <footer className="idc-foot">Valid only while membership is active</footer>
         </article>
       </div>
     </div>
