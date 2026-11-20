@@ -114,7 +114,7 @@ export async function tally(env: Env, electionId: string) {
     env.DB.prepare('SELECT encrypted_selections s FROM election_ballots WHERE election_id=?').bind(electionId).all<{ s: string }>(),
     env.DB.prepare('SELECT id,title FROM election_positions WHERE election_id=? ORDER BY display_order,title').bind(electionId).all<{ id: string; title: string }>(),
     env.DB.prepare("SELECT id,position_id,display_name FROM election_candidates WHERE election_id=? AND status='eligible'").bind(electionId).all<{ id: string; position_id: string; display_name: string }>(),
-    env.DB.prepare('SELECT COUNT(*) n FROM election_voters WHERE election_id=?').bind(electionId).first<{ n: number }>(),
+    env.DB.prepare('SELECT COUNT(*) n FROM election_ballots WHERE election_id=?').bind(electionId).first<{ n: number }>(),
   ]);
   const counts = new Map<string, number>();
   for (const ballot of ballots.results ?? []) { try { for (const candidateId of Object.values(JSON.parse(ballot.s) as Record<string, string>)) counts.set(candidateId, (counts.get(candidateId) ?? 0) + 1); } catch { /* ignore malformed ballot */ } }

@@ -11,7 +11,7 @@ async function list(env: Env) {
     (SELECT COUNT(*) FROM election_positions p WHERE p.election_id=e.id) positions,
     (SELECT COUNT(*) FROM election_candidates c WHERE c.election_id=e.id) candidates,
     (SELECT COUNT(*) FROM election_candidates c WHERE c.election_id=e.id AND c.status='eligible') eligible,
-    (SELECT COUNT(*) FROM election_voters v WHERE v.election_id=e.id) votes
+    (SELECT COUNT(*) FROM election_ballots v WHERE v.election_id=e.id) votes
     FROM elections e ORDER BY e.created_at DESC`).all();
   return json(rows.results ?? []);
 }
