@@ -37,7 +37,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, request, env, w
   headers.set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(record.filename)}`);
 
   let body: ReadableStream | null = null;
-  if (publicImage && githubEnabled(env)) {
+  // Content imported with the site ships as static files, so it never depends on GitHub or R2.
+  if (publicImage && key.startsWith('uploads/seed/') && env.ASSETS) {
+    const asset = await env.ASSETS.fetch(new URL(`/seed-media/${key}`, request.url));
+    if (asset.ok && (asset.headers.get('Content-Type') ?? '').startsWith('image/')) body = asset.body;
+  }
+  if (!body && publicImage && githubEnabled(env)) {
     try { body = (await getGithub(env, key))?.body ?? null; } catch (error) { console.error('GitHub read failed:', error); }
   }
   if (!body && env.BUCKET) {
