@@ -151,3 +151,4 @@
   .pay-amount strong { font-size: 22px; } .dues-status strong { font-size: 18px; }
   .ballot-bar { bottom: 8px; padding: 12px 14px; } .candidate { padding: 12px; }
 }
+.field-hint { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; font-size: 13px; line-height: 1.5; color: var(--subtle); }

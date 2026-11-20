@@ -1,5 +1,5 @@
 import { Env, currentUser, hasPermission } from '../auth/_shared';
-import { applyPaymentSuccess, audit, bankDetails, currentSession, duesAmount, ensureMembership, fail, json, pathOf, readBody, text } from '../_portal';
+import { applyPaymentSuccess, audit, bankDetails, currentSession, duesSchedule, ensureMembership, fail, json, pathOf, readBody, text } from '../_portal';
 
 type Staff = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 const isSuper = (u: Staff) => u.role === 'super_admin';
@@ -110,7 +110,7 @@ async function overview(env: Env, user: Staff) {
     env.DB.prepare('SELECT p.id,p.amount_minor,p.status,p.purpose,p.method,p.created_at,u.full_name FROM payments p LEFT JOIN users u ON u.id=p.user_id ORDER BY p.created_at DESC LIMIT 6').all(),
     env.DB.prepare("SELECT COALESCE(academic_level,'Unknown') level,COUNT(*) n FROM users WHERE status='active' GROUP BY academic_level ORDER BY level").all<{ level: string; n: number }>(),
   ]);
-  return json({ session, members: m, pending_payments: pend?.n ?? 0, dues: { ...dues, amount_minor: await duesAmount(env) }, open_elections: el?.n ?? 0, recent_payments: pay.results ?? [], by_level: level.results ?? [], bank: await bankDetails(env), staff: user.id });
+  return json({ session, members: m, pending_payments: pend?.n ?? 0, dues: { ...dues, amount_minor: Math.max(0, ...Object.values(await duesSchedule(env))) }, open_elections: el?.n ?? 0, recent_payments: pay.results ?? [], by_level: level.results ?? [], bank: await bankDetails(env), staff: user.id });
 }
 
 async function finance(env: Env, user: Staff) {

@@ -24,7 +24,7 @@ export function AdminOverview() {
       <Stat label="Tellers to review" value={d.pending_payments}/>
       <Stat label="Dues collected" value={naira(d.dues.total)} hint={`${d.dues.payers} members paid`}/>
     </div>
-    {(!d.dues.amount_minor || !d.bank.configured) && <div className="notice-bar"><ShieldCheck size={16}/><span>Set the dues amount and bank details in <Link to="/admin/settings">Settings</Link> so members can pay.</span></div>}
+    {(!d.dues.amount_minor || !d.bank.configured) && <div className="notice-bar"><ShieldCheck size={16}/><span>Set the dues amount and bank details in <Link to="/admin/payment-settings">Dues &amp; payment details</Link> so members can pay.</span></div>}
     <div className="dashboard-grid">
       <Panel title="Active members by level">{d.by_level.length === 0 ? <EmptyState title="No members yet" text="Approved members will be counted here."/> : <div className="chart-box"><ResponsiveContainer width="100%" height="100%"><BarChart data={d.by_level}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="level"/><YAxis allowDecimals={false}/><Tooltip/><Bar dataKey="n" fill="#008751" radius={[6, 6, 0, 0]}/></BarChart></ResponsiveContainer></div>}</Panel>
       <Panel title="Recent payments" action={<Link className="text-action" to="/admin/payments">All payments</Link>}>

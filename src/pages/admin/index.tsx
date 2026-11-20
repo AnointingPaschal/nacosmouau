@@ -5,6 +5,7 @@ import { AdminMembers } from './AdminMembers';
 import { AdminPayments } from './AdminPayments';
 import { AdminAnalytics, AdminAudit, AdminFinance, AdminRoles, AdminWelfare } from './AdminReports';
 import { AdminSettings } from './AdminSettings';
+import { AdminPaymentSettings } from './AdminPaymentSettings';
 
 export { AdminOverview } from './AdminReports';
 
@@ -13,6 +14,7 @@ export function AdminRouter() {
   switch (module) {
     case 'members': return <AdminMembers/>;
     case 'payments': return <AdminPayments/>;
+    case 'payment-settings': return <AdminPaymentSettings/>;
     case 'elections': return <AdminElections/>;
     case 'finance': return <AdminFinance/>;
     case 'analytics': return <AdminAnalytics/>;

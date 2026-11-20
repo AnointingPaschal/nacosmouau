@@ -15,7 +15,22 @@ export async function setting<T>(env: Env, key: string, fallback: T): Promise<T>
   try { return JSON.parse(row.value_json) as T; } catch { return fallback; }
 }
 
-export async function duesAmount(env: Env) { const value = Number(await setting<number>(env, 'dues_amount_minor', 0)); return Number.isSafeInteger(value) && value > 0 ? value : 0; }
+export const LEVELS = ['100', '200', '300', '400'] as const;
+export type DuesSchedule = Record<string, number>;
+const kobo = (v: unknown) => { const n = Number(v); return Number.isSafeInteger(n) && n > 0 ? n : 0; };
+
+/** Dues per level for the current session. Falls back to the old single amount when a level has none. */
+export async function duesSchedule(env: Env): Promise<DuesSchedule> {
+  const [byLevel, legacy] = await Promise.all([setting<Record<string, unknown>>(env, 'dues_by_level', {}), setting<number>(env, 'dues_amount_minor', 0)]);
+  const out: DuesSchedule = {};
+  for (const level of LEVELS) out[level] = kobo(byLevel?.[level]) || kobo(legacy);
+  return out;
+}
+export async function duesAmount(env: Env, level?: string | null) { const schedule = await duesSchedule(env); return level && schedule[level] ? schedule[level] : 0; }
+export async function duesAmountForUser(env: Env, userId: string) {
+  const row = await env.DB.prepare('SELECT academic_level FROM users WHERE id=?').bind(userId).first<{ academic_level: string | null }>();
+  return duesAmount(env, row?.academic_level ?? null);
+}
 
 export async function bankDetails(env: Env) {
   const [bank, name, number] = await Promise.all([setting<string>(env, 'bank_name', ''), setting<string>(env, 'bank_account_name', ''), setting<string>(env, 'bank_account_number', '')]);

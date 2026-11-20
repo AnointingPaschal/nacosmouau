@@ -1,5 +1,5 @@
 import { Env, currentUser, passwordHash, verifyPassword } from '../auth/_shared';
-import { applyPaymentSuccess, audit, tally, bankDetails, currentSession, duesAmount, duesPaid, ensureMembership, fail, fileKey, json, pathOf, paystackInitialize, paystackReady, paystackVerify, randomId, readBody, text } from '../_portal';
+import { applyPaymentSuccess, audit, tally, bankDetails, currentSession, duesAmountForUser, duesPaid, ensureMembership, fail, fileKey, json, pathOf, paystackInitialize, paystackReady, paystackVerify, randomId, readBody, text } from '../_portal';
 
 type Me = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 const publicPhoto = (key: unknown) => (typeof key === 'string' && key ? `/api/files/${key}` : null);
@@ -18,7 +18,7 @@ async function duesState(env: Env, userId: string, session: string) {
 async function overview(env: Env, user: Me) {
   const session = await currentSession(env);
   const [dues, amount, membership, events, elections, notices, me] = await Promise.all([
-    duesState(env, user.id, session), duesAmount(env), ensureMembership(env, user.id),
+    duesState(env, user.id, session), duesAmountForUser(env, user.id), ensureMembership(env, user.id),
     env.DB.prepare('SELECT COUNT(*) n FROM event_registrations WHERE user_id=? OR email=?').bind(user.id, user.email).first<{ n: number }>(),
     env.DB.prepare("SELECT COUNT(*) n FROM elections WHERE status IN ('nominations','voting')").first<{ n: number }>(),
     env.DB.prepare("SELECT id,title,body,priority,published_at FROM announcements WHERE published_at IS NOT NULL AND (expires_at IS NULL OR expires_at>datetime('now')) ORDER BY published_at DESC LIMIT 3").all(),
@@ -37,7 +37,7 @@ async function payments(env: Env, user: Me) {
   const session = await currentSession(env);
   const [rows, amount, bank, state] = await Promise.all([
     env.DB.prepare('SELECT id,reference,amount_minor,currency,status,purpose,session,method,created_at,paid_at,review_note FROM payments WHERE user_id=? ORDER BY created_at DESC LIMIT 100').bind(user.id).all(),
-    duesAmount(env), bankDetails(env), duesState(env, user.id, session),
+    duesAmountForUser(env, user.id), bankDetails(env), duesState(env, user.id, session),
   ]);
   return json({ session, dues_amount_minor: amount, dues: state, bank, paystack: paystackReady(env), payments: rows.results ?? [] });
 }
@@ -49,7 +49,7 @@ async function createPayment(request: Request, env: Env, user: Me) {
   const session = await currentSession(env);
   let amount = 0; let refId: string | null = null;
   if (purpose === 'dues') {
-    amount = await duesAmount(env);
+    amount = await duesAmountForUser(env, user.id);
     if (!amount) return fail('NACOS dues have not been set for this session yet. Please check back soon.', 409);
     const existing = await duesState(env, user.id, session);
     if (existing.status === 'paid') return fail(`Your dues for ${session} are already paid.`, 409);
