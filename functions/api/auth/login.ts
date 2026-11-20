@@ -3,23 +3,27 @@ import { Env, cookie, fail, json, randomId, sha256, verifyPassword } from './_sh
 type LoginUser = { id: string; email: string; password_hash: string; full_name: string; role: string; status: string };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  let body: { email?: string; password?: string };
+  let body: { identifier?: string; email?: string; password?: string };
   try { body = await request.json(); } catch { return fail('Invalid request body.'); }
 
-  const email = body.email?.trim().toLowerCase() ?? '';
+  // Members sign in with their matric or JAMB registration number. Executives may still use their email.
+  const typed = (body.identifier ?? body.email ?? '').trim();
+  const email = typed.toLowerCase();
+  let regNumber = typed.replace(/\s+/g, '').toUpperCase();
+  if (/^\d{2}\/\d{3,7}$/.test(regNumber)) regNumber = `MOUAU/CMP/${regNumber}`;
   const password = body.password ?? '';
   let user: LoginUser | null;
   try {
-    user = await env.DB.prepare('SELECT id,email,password_hash,full_name,role,status FROM users WHERE email=?')
-      .bind(email).first<LoginUser>();
+    user = await env.DB.prepare('SELECT id,email,password_hash,full_name,role,status FROM users WHERE email=? OR matric_number=?')
+      .bind(email, regNumber).first<LoginUser>();
   } catch (error) {
     console.error('Login account lookup failed:', error);
     return fail('Sign in could not read the account database. Check the users table schema and the auth/login Function log.', 500);
   }
 
-  if (!user) return fail('Email or password is incorrect.', 401);
+  if (!user) return fail('Matric/registration number or password is incorrect.', 401);
   try {
-    if (!(await verifyPassword(password, user.password_hash))) return fail('Email or password is incorrect.', 401);
+    if (!(await verifyPassword(password, user.password_hash))) return fail('Matric/registration number or password is incorrect.', 401);
   } catch (error) {
     console.error('Login password verification failed:', error);
     return fail('Sign in could not verify the password hash. Check the password_hash value and the auth/login Function log.', 500);
