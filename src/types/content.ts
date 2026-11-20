@@ -29,7 +29,11 @@ export interface CmsPage { id: string; slug: string; title: string; summary: str
 export interface Executive { id: string; full_name: string; position: string; bio: string | null; image_url: string | null; email?: string | null; tenure: string; is_current: boolean; display_order: number }
 export interface NewsItem { id: string; title: string; slug: string; excerpt: string | null; body: string | null; image_url: string | null; category: string | null; published_at: string | null; status: string }
 export interface Announcement { id: string; title: string; body: string; published_at: string | null; expires_at: string | null; priority: 'normal' | 'important' | 'urgent' }
-export interface EventItem { id: string; title: string; slug: string; description: string | null; image_url: string | null; starts_at: string; ends_at: string | null; venue: string | null; price_minor: number; currency: string; capacity: number | null; registration_open: boolean }
+export interface EventItem { id: string; title: string; slug: string; description: string | null; image_url: string | null; starts_at: string; ends_at: string | null; venue: string | null; price_minor: number; currency: string; capacity: number | null; registration_open: boolean; summary?: string | null; stats_text?: string | null; stats?: EventStat[]; speakers?: EventSpeaker[]; photos?: EventPhoto[]; videos?: EventVideo[] }
+export interface EventStat { value: string; label: string }
+export interface EventSpeaker { id: string; name: string; role: string | null; image_url: string | null }
+export interface EventPhoto { id: string; image_url: string; caption: string | null }
+export interface EventVideo { id: string; video_url: string; thumbnail_url: string | null; caption: string | null; duration: string | null; is_featured: boolean }
 export interface GalleryAlbum { id: string; title: string; description: string | null; cover_image_url: string | null; photos: GalleryPhoto[] }
 export interface GalleryPhoto { id: string; image_url: string; caption: string | null; display_order: number }
 export interface AssociationDocument { id: string; title: string; description: string | null; category: string; file_url: string; published_at: string | null }

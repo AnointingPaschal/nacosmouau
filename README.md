@@ -14,6 +14,10 @@ This project uses `wrangler.jsonc` as the Pages Functions configuration source o
 5a. Private files (member profile photos and documents) must not go to a public repository, so they still use the R2 bucket. Create the R2 bucket with `npx wrangler r2 bucket create nacos-mouau-media` before deploying; `wrangler.jsonc` binds it as `BUCKET`.
 6. Configure provider secrets through Cloudflare Pages secrets. Session cookies use the existing D1-backed authentication flow; no `SESSION_SECRET` is required. Never put secrets in Vite variables.
 
+## Event pages
+
+Each event page can show a short summary, headline stats, an about section, a photo gallery with a full-screen viewer, videos with a featured highlight, and featured speakers. Manage all of it under Admin → Events: the **Event photos & videos** tab has a bulk photo uploader, and videos are links (YouTube, Vimeo or a direct `.mp4` URL). Apply `migrations/0007_event_details.sql` with `npx wrangler d1 migrations apply nacos-mouau --remote` before using these fields.
+
 ## Manual initial administrator recovery
 
 If Wrangler cannot be installed, `python3 scripts/generate_admin_sql.py` can generate SQL for the first super administrator. Run it locally in Termux; the password is entered without echo and only the PBKDF2 hash is printed. Paste the generated statements into the authenticated Cloudflare D1 Console for the database bound to production. This is for an empty `users` table only; then verify the row and sign in at `/login?role=admin`. Never share or commit the generated SQL.

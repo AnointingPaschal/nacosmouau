@@ -6,6 +6,7 @@ import App from './App';
 import './style.css';
 import './theme.css';
 import './theme-pages.css';
+import './theme-events.css';
 
 class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean}> {
   state = { hasError: false };
