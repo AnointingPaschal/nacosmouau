@@ -1,0 +1,238 @@
+/* Responsive layer: compact on phones, roomy and multi-column on laptops and large monitors. Loaded last. */
+:root { --container: 1240px; --gutter: 5%; }
+
+/* ---------- Desktop and wide screens ---------- */
+@media (min-width: 1025px) {
+  :root { --container: 1320px; }
+  .section-wrap, .hx-inner, .ev-wrap, .ev-hero-inner { width: min(var(--container), 92%); }
+  .metrics-strip, .president-band, .join-banner { padding-left: max(4%, calc((100% - var(--container)) / 2)); padding-right: max(4%, calc((100% - var(--container)) / 2)); }
+  .institution-footer { padding-left: max(4%, calc((100% - var(--container)) / 2)); padding-right: max(4%, calc((100% - var(--container)) / 2)); }
+  .utility-bar, .site-header { padding-left: max(4%, calc((100% - var(--container)) / 2)); padding-right: max(4%, calc((100% - var(--container)) / 2)); }
+  .site-header { height: 82px; }
+  .main-nav { gap: clamp(18px, 2vw, 34px); }
+  .main-nav a { font-size: 15px; }
+  .hx { min-height: clamp(600px, 76vh, 760px); }
+  .hx-copy { max-width: 720px; }
+  .hx-copy h1 { font-size: clamp(48px, 4.6vw, 72px); }
+  .hx-copy > p { font-size: 19px; max-width: 560px; }
+  .hx-action { min-height: 54px; padding: 0 30px; font-size: 16px; }
+  .hx-arrow { width: 54px; height: 54px; }
+  .metric { padding: 52px 36px; }
+  .about-split { padding-top: 128px; padding-bottom: 128px; gap: 8%; }
+  .executive-grid { grid-template-columns: repeat(4, 1fr); gap: 26px; }
+  .event-grid { grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .achievement-row { grid-template-columns: repeat(3, 1fr); gap: 26px; }
+  .gallery-preview { grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .album-cover { height: 300px; }
+  .publication-grid { grid-template-columns: repeat(3, 1fr); gap: 26px; }
+  .executive-grid-large { grid-template-columns: repeat(4, 1fr); }
+  .photo-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .photo-tile { height: 210px; }
+  .executive-section, .events-section, .gallery-section { padding-top: 120px; padding-bottom: 120px; }
+  .feed-section, .achievement-band { padding: 112px 0; }
+  .feeds-grid { grid-template-columns: 1.1fr .9fr; gap: 72px; }
+  .join-banner { padding-top: 104px; padding-bottom: 104px; }
+  .join-banner h2 { font-size: clamp(54px, 5.4vw, 84px); }
+  .institution-footer { padding-top: 96px; }
+  .footer-main { grid-template-columns: 1.4fr 1fr 1.2fr 1fr; gap: 72px; }
+  .page-intro { padding: 104px 0 84px; }
+  .page-intro h1 { font-size: clamp(52px, 5vw, 80px); }
+  .article-page, .event-detail { width: min(900px, 90%); }
+  .contact-layout { grid-template-columns: 1.2fr .6fr; gap: 8%; }
+  .ev-hero-inner { padding: 72px 0 76px; }
+  .ev-hero h1 { font-size: clamp(44px, 4.8vw, 72px); }
+  .ev-layout { grid-template-columns: minmax(0, 1fr) 380px; gap: 72px; }
+  .ev-mosaic { grid-auto-rows: 200px; gap: 12px; }
+  .ev-video-grid, .ev-speakers { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+  .workspace-content { padding: 40px 48px 72px; }
+}
+@media (min-width: 1025px) and (max-width: 1200px) {
+  .main-nav { gap: 16px; }
+  .main-nav a { font-size: 14px; }
+  .header-portal { display: none; }
+}
+@media (min-width: 1600px) {
+  :root { --container: 1480px; }
+  .hx { min-height: clamp(680px, 74vh, 840px); }
+  .hx-copy { max-width: 800px; }
+  .hx-copy h1 { font-size: clamp(64px, 4.2vw, 84px); }
+  .about-main h2, .section-head h2 { font-size: clamp(48px, 3.4vw, 64px); }
+  .event-card > img, .event-card-cover { height: 240px; }
+  .album-cover { height: 340px; }
+  .ev-mosaic { grid-auto-rows: 230px; }
+}
+
+/* ---------- Tablets ---------- */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .section-wrap, .hx-inner, .ev-wrap, .ev-hero-inner { width: 90%; }
+  .hx { min-height: 520px; }
+  .hx-copy h1 { font-size: clamp(36px, 6vw, 52px); }
+  .hx-copy > p { font-size: 16px; }
+  .executive-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .event-grid, .achievement-row, .publication-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .gallery-preview { grid-template-columns: repeat(3, 1fr); }
+  .photo-grid { grid-template-columns: repeat(4, 1fr); }
+  .executive-section, .events-section, .gallery-section { padding-top: 84px; padding-bottom: 84px; }
+  .metric strong { font-size: clamp(34px, 5vw, 48px); }
+}
+
+/* ---------- Phones: smaller type, tighter boxes, shorter buttons ---------- */
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+  .utility-bar { height: 26px; font-size: 9px; letter-spacing: .1em; }
+  .site-header { height: 56px; padding: 0 4%; gap: 8px; }
+  .brand { gap: 8px; }
+  .brand-symbol { width: 32px; height: 32px; border-radius: 8px; }
+  .brand-copy b { font-size: 17px; }
+  .brand-copy small { font-size: 8px; letter-spacing: .16em; margin-top: 2px; }
+  .icon-button, .mobile-toggle { width: 36px; height: 36px; border-radius: 8px; }
+  .icon-button svg, .mobile-toggle svg { width: 17px; height: 17px; }
+  .header-join { height: 36px; padding: 0 12px; font-size: 12px; border-radius: 8px; }
+  .header-join svg { width: 12px; height: 12px; }
+  .header-actions { gap: 6px; }
+  .main-nav { top: 56px; padding: 6px 5% 14px; }
+  .main-nav a { height: 44px; font-size: 15px; }
+
+  .hx { min-height: 400px; }
+  .hx-inner { width: 90%; padding: 44px 0 78px; }
+  .hx-badge { font-size: 9.5px; gap: 8px; letter-spacing: .16em; }
+  .hx-badge:before { width: 22px; }
+  .hx-copy h1 { font-size: clamp(24px, 7.2vw, 30px); margin: 10px 0 8px; letter-spacing: -.03em; }
+  .hx-copy > p { font-size: 12.5px; line-height: 1.5; max-width: 340px; }
+  .hx-actions { margin-top: 14px; gap: 8px; }
+  .hx-action { min-height: 38px; padding: 0 10px; font-size: 12px; border-radius: 8px; }
+  .hx-arrow { width: 34px; height: 34px; bottom: 16px; }
+  .hx-arrow svg { width: 16px; height: 16px; }
+  .hx-dots { bottom: 29px; gap: 6px; }
+  .hx-dots button { width: 22px; height: 3px; }
+
+  .metric { padding: 18px 12px; gap: 4px; }
+  .metric strong { font-size: 26px; }
+  .metric span { font-size: 9.5px; letter-spacing: .1em; }
+  .metric svg { width: 15px; height: 15px; right: 10px; top: 12px; }
+
+  .about-split { padding-top: 48px; padding-bottom: 48px; gap: 28px; }
+  .about-main h2, .section-head h2, .president-copy h2, .join-banner h2 { font-size: 24px; margin: 10px 0; }
+  .about-main > p, .president-copy > p { font-size: 13.5px; line-height: 1.65; }
+  .eyebrow-green, .eyebrow-light { font-size: 10px; gap: 10px; letter-spacing: .18em; }
+  .eyebrow-green:before, .eyebrow-light:before { width: 24px; }
+  .text-action { font-size: 12.5px; }
+  .affiliation { padding: 12px; margin-top: 20px; }
+  .affiliation-mark { width: 38px; height: 38px; }
+  .affiliation b { font-size: 13px; }
+  .affiliation small { font-size: 11.5px; }
+  .vision-stack article { padding: 18px 16px; border-radius: 12px; }
+  .vision-icon { width: 36px; height: 36px; margin-bottom: 14px; }
+  .vision-stack h3 { font-size: 19px; }
+  .vision-stack p { font-size: 13px; }
+
+  .president-band { padding: 44px 5%; gap: 18px; }
+  .president-portrait { max-width: 150px; border-radius: 12px; }
+  .tenure-badge { padding: 9px 14px; font-size: 12px; }
+
+  .executive-section, .events-section, .gallery-section { padding-top: 48px; padding-bottom: 48px; }
+  .feed-section, .achievement-band { padding: 48px 0; }
+  .section-head { margin-bottom: 20px; gap: 8px; }
+  .section-head h2 { margin-top: 8px; }
+  .executive-grid { gap: 10px; }
+  .executive-card { border-radius: 12px; padding-bottom: 12px; }
+  .executive-card h3 { font-size: 14px; margin: 10px 10px 2px; }
+  .executive-card > p { font-size: 12px; margin-inline: 10px; }
+  .executive-card > small { font-size: 10px; margin: 6px 10px 0; }
+  .news-row, .announcement-row { padding: 12px; gap: 10px; border-radius: 12px; }
+  .row-icon { width: 34px; height: 34px; border-radius: 8px; }
+  .news-row h3, .announcement-row h3 { font-size: 14.5px; margin: 5px 0 3px; }
+  .news-row p, .announcement-row p { font-size: 12.5px; }
+  .news-row span, .announcement-row small { font-size: 9.5px; }
+  .event-card { border-radius: 12px; }
+  .event-card > img, .event-card-cover { height: 150px; }
+  .event-card-body { padding: 14px; }
+  .event-card h3 { font-size: 17px; margin: 10px 0 6px; }
+  .event-card p { font-size: 12.5px; }
+  .event-label { font-size: 9.5px; padding: 4px 8px; }
+  .achievement-card { padding: 16px; border-radius: 12px; }
+  .achievement-card img { height: 140px; }
+  .achievement-card h3 { font-size: 17px; }
+  .achievement-card p { font-size: 12.5px; }
+  .album-cover { height: 150px; border-radius: 12px; }
+  .album-cover > span { font-size: 13px; padding: 30px 12px 12px; }
+
+  .join-banner { padding: 44px 5%; gap: 16px; }
+  .join-banner h2 { font-size: 28px; }
+  .join-banner p { font-size: 13.5px; }
+  .join-banner .button-white { min-height: 44px; padding: 0 20px; font-size: 14px; }
+  .institution-footer { padding-top: 44px; }
+  .footer-brand > p { font-size: 13px; }
+  .footer-main h3 { font-size: 10px; margin-bottom: 12px; }
+  .footer-nav { gap: 9px; }
+  .footer-nav a, .footer-contact a, .footer-contact > p, .footer-contact > a { font-size: 12.5px; }
+  .footer-legal { font-size: 10px; padding: 12px 0; min-height: 0; }
+
+  .button { min-height: 42px; padding: 0 18px; font-size: 13.5px; border-radius: 9px; }
+  .page-intro { padding: 40px 0 34px; }
+  .page-intro h1 { font-size: 30px; }
+  .page-intro p { font-size: 14px; }
+  .select-wrap, .search-toolbar label, .search-toolbar select { height: 42px; }
+  .filter-tabs button, .catalogue-tabs button { font-size: 12.5px; padding: 8px 14px; }
+  .publication-card { border-radius: 12px; }
+  .publication-card h2 { font-size: 17px; margin: 8px 14px 6px; }
+  .publication-card p { font-size: 13px; margin: 0 14px 12px; }
+  .publication-card > img, .publication-cover { height: 150px; }
+  .article-page h1, .event-detail h1 { font-size: 28px; }
+  .article-lead { font-size: 15.5px; }
+  .article-body { font-size: 15px; line-height: 1.75; }
+  .field { font-size: 12px; gap: 6px; }
+  .field input, .field select, .field textarea { min-height: 44px; padding: 10px 12px; font-size: 16px; border-radius: 9px; }
+  .auth-card { padding: 20px; }
+  .auth-heading h1 { font-size: 26px; }
+  .auth-heading p { font-size: 13px; }
+  .dialog { padding: 20px; border-radius: 14px; }
+  .dialog h2 { font-size: 22px; }
+
+  .ev-hero-inner { padding: 26px 0 30px; }
+  .ev-crumbs { font-size: 12px; gap: 6px; }
+  .ev-hero h1 { font-size: 26px; margin: 12px 0 8px; }
+  .ev-lead { font-size: 13.5px; line-height: 1.55; }
+  .ev-chips { gap: 6px; margin-top: 16px; }
+  .ev-chips span { font-size: 11.5px; padding: 6px 10px; gap: 6px; }
+  .ev-chips svg { width: 13px; height: 13px; }
+  .ev-wrap { padding: 18px 0 48px; }
+  .ev-back { font-size: 12.5px; margin-bottom: 14px; }
+  .ev-stats { border-radius: 12px; margin-bottom: 28px; }
+  .ev-stats div { padding: 16px 8px; }
+  .ev-stats strong { font-size: 24px; }
+  .ev-stats span { font-size: 12px; margin-top: 4px; }
+  .ev-section { margin-bottom: 34px; }
+  .ev-about p { font-size: 14.5px; line-height: 1.75; }
+  .ev-mosaic { grid-auto-rows: 104px; gap: 6px; }
+  .ev-photo { border-radius: 10px; }
+  .ev-video { border-radius: 12px; }
+  .ev-video-play { width: 44px; height: 44px; }
+  .ev-video.is-featured .ev-video-play { width: 58px; height: 58px; }
+  .ev-video-meta b { font-size: 12.5px; }
+  .ev-video-meta i { font-size: 11px; }
+  .ev-speaker { padding: 16px 8px; border-radius: 12px; }
+  .ev-speaker img, .ev-speaker-initials { width: 62px; height: 62px; font-size: 18px; margin-bottom: 10px; }
+  .ev-speaker h3 { font-size: 14px; }
+  .ev-speaker p { font-size: 12px; }
+  .ev-card { padding: 18px; border-radius: 14px; }
+  .ev-card h2 { font-size: 18px; margin-bottom: 12px; }
+  .ev-card dl { gap: 12px; margin-bottom: 16px; }
+  .ev-card dt { font-size: 10.5px; }
+  .ev-card dd { font-size: 14px; }
+
+  .workspace-content { padding: 16px 12px 36px; }
+  .workspace-title h1 { font-size: 22px; }
+  .workspace-title p { font-size: 12px; }
+  .count-card { padding: 12px; border-radius: 10px; }
+  .count-card strong { font-size: 24px; }
+  .workspace-panel { padding: 14px; border-radius: 12px; }
+  .panel-heading h2 { font-size: 16px; }
+  .record-row strong { font-size: 13px; }
+  .quick-link { font-size: 12px; padding: 10px; }
+}
+@media (max-width: 380px) {
+  .brand-copy small { display: none; }
+  .header-join { padding: 0 9px; font-size: 11.5px; }
+  .hx-copy h1 { font-size: 23px; }
+}

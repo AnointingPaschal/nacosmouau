@@ -10,24 +10,70 @@ INSERT OR IGNORE INTO roles(id,name,description,is_system) VALUES
 ('election_committee','Election Committee','Election administration',1),
 ('content_manager','Content Manager','Public website and content management',1),
 ('member','Member','Standard member access',1);
-INSERT OR IGNORE INTO permissions(id,resource,action,description)
-SELECT resource||'.'||action,resource,action,'Permission to '||action||' '||resource FROM (
- SELECT 'members' resource, 'read' action UNION ALL SELECT 'members','create' UNION ALL SELECT 'members','update' UNION ALL SELECT 'members','delete' UNION ALL
- SELECT 'payments','read' UNION ALL SELECT 'payments','create' UNION ALL SELECT 'payments','update' UNION ALL SELECT 'payments','delete' UNION ALL
- SELECT 'finance','read' UNION ALL SELECT 'finance','create' UNION ALL SELECT 'finance','update' UNION ALL SELECT 'finance','delete' UNION ALL
- SELECT 'elections','read' UNION ALL SELECT 'elections','create' UNION ALL SELECT 'elections','update' UNION ALL SELECT 'elections','delete' UNION ALL
- SELECT 'events','read' UNION ALL SELECT 'events','create' UNION ALL SELECT 'events','update' UNION ALL SELECT 'events','delete' UNION ALL
- SELECT 'executives','read' UNION ALL SELECT 'executives','create' UNION ALL SELECT 'executives','update' UNION ALL SELECT 'executives','delete' UNION ALL
- SELECT 'cms','read' UNION ALL SELECT 'cms','create' UNION ALL SELECT 'cms','update' UNION ALL SELECT 'cms','delete' UNION ALL
- SELECT 'news','read' UNION ALL SELECT 'news','create' UNION ALL SELECT 'news','update' UNION ALL SELECT 'news','delete' UNION ALL
- SELECT 'announcements','read' UNION ALL SELECT 'announcements','create' UNION ALL SELECT 'announcements','update' UNION ALL SELECT 'announcements','delete' UNION ALL
- SELECT 'achievements','read' UNION ALL SELECT 'achievements','create' UNION ALL SELECT 'achievements','update' UNION ALL SELECT 'achievements','delete' UNION ALL
- SELECT 'gallery','read' UNION ALL SELECT 'gallery','create' UNION ALL SELECT 'gallery','update' UNION ALL SELECT 'gallery','delete' UNION ALL
- SELECT 'documents','read' UNION ALL SELECT 'documents','create' UNION ALL SELECT 'documents','update' UNION ALL SELECT 'documents','delete' UNION ALL
- SELECT 'settings','read' UNION ALL SELECT 'settings','update' UNION ALL SELECT 'messages','read' UNION ALL SELECT 'messages','update' UNION ALL SELECT 'messages','delete' UNION ALL
- SELECT 'academics','read' UNION ALL SELECT 'academics','create' UNION ALL SELECT 'academics','update' UNION ALL SELECT 'academics','delete' UNION ALL
- SELECT 'roles','read' UNION ALL SELECT 'roles','update' UNION ALL SELECT 'audit','read'
-);
+INSERT OR IGNORE INTO permissions(id,resource,action,description) VALUES
+('members.read','members','read','Permission to read members'),
+('members.create','members','create','Permission to create members'),
+('members.update','members','update','Permission to update members'),
+('members.delete','members','delete','Permission to delete members'),
+('payments.read','payments','read','Permission to read payments'),
+('payments.create','payments','create','Permission to create payments'),
+('payments.update','payments','update','Permission to update payments'),
+('payments.delete','payments','delete','Permission to delete payments'),
+('finance.read','finance','read','Permission to read finance'),
+('finance.create','finance','create','Permission to create finance'),
+('finance.update','finance','update','Permission to update finance'),
+('finance.delete','finance','delete','Permission to delete finance'),
+('elections.read','elections','read','Permission to read elections'),
+('elections.create','elections','create','Permission to create elections'),
+('elections.update','elections','update','Permission to update elections');
+INSERT OR IGNORE INTO permissions(id,resource,action,description) VALUES
+('elections.delete','elections','delete','Permission to delete elections'),
+('events.read','events','read','Permission to read events'),
+('events.create','events','create','Permission to create events'),
+('events.update','events','update','Permission to update events'),
+('events.delete','events','delete','Permission to delete events'),
+('executives.read','executives','read','Permission to read executives'),
+('executives.create','executives','create','Permission to create executives'),
+('executives.update','executives','update','Permission to update executives'),
+('executives.delete','executives','delete','Permission to delete executives'),
+('cms.read','cms','read','Permission to read cms'),
+('cms.create','cms','create','Permission to create cms'),
+('cms.update','cms','update','Permission to update cms'),
+('cms.delete','cms','delete','Permission to delete cms'),
+('news.read','news','read','Permission to read news'),
+('news.create','news','create','Permission to create news');
+INSERT OR IGNORE INTO permissions(id,resource,action,description) VALUES
+('news.update','news','update','Permission to update news'),
+('news.delete','news','delete','Permission to delete news'),
+('announcements.read','announcements','read','Permission to read announcements'),
+('announcements.create','announcements','create','Permission to create announcements'),
+('announcements.update','announcements','update','Permission to update announcements'),
+('announcements.delete','announcements','delete','Permission to delete announcements'),
+('achievements.read','achievements','read','Permission to read achievements'),
+('achievements.create','achievements','create','Permission to create achievements'),
+('achievements.update','achievements','update','Permission to update achievements'),
+('achievements.delete','achievements','delete','Permission to delete achievements'),
+('gallery.read','gallery','read','Permission to read gallery'),
+('gallery.create','gallery','create','Permission to create gallery'),
+('gallery.update','gallery','update','Permission to update gallery'),
+('gallery.delete','gallery','delete','Permission to delete gallery'),
+('documents.read','documents','read','Permission to read documents');
+INSERT OR IGNORE INTO permissions(id,resource,action,description) VALUES
+('documents.create','documents','create','Permission to create documents'),
+('documents.update','documents','update','Permission to update documents'),
+('documents.delete','documents','delete','Permission to delete documents'),
+('settings.read','settings','read','Permission to read settings'),
+('settings.update','settings','update','Permission to update settings'),
+('messages.read','messages','read','Permission to read messages'),
+('messages.update','messages','update','Permission to update messages'),
+('messages.delete','messages','delete','Permission to delete messages'),
+('academics.read','academics','read','Permission to read academics'),
+('academics.create','academics','create','Permission to create academics'),
+('academics.update','academics','update','Permission to update academics'),
+('academics.delete','academics','delete','Permission to delete academics'),
+('roles.read','roles','read','Permission to read roles'),
+('roles.update','roles','update','Permission to update roles'),
+('audit.read','audit','read','Permission to read audit');
 INSERT OR IGNORE INTO role_permissions(role_id,permission_id)
 SELECT 'super_admin',id FROM permissions;
 INSERT OR IGNORE INTO role_permissions(role_id,permission_id)
