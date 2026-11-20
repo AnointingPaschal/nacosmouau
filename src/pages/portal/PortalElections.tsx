@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, CalendarClock, Check, Lock, Ticket, Vote } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,10 +7,9 @@ import { api } from '../../lib/api';
 import { naira, when } from '../../lib/money';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel, Pill } from '../../components/Workspace';
-import { LiveResults } from '../../components/LiveResults';
 import { CandidacyFlow, PhaseSteps, candidacyState, levelsText, type Candidacy, type Position } from './Candidacy';
 
-interface ElectionRow { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; my_candidacies: Candidacy[]; has_voted: boolean }
+interface ElectionRow { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; live_results: number; my_candidacies: Candidacy[]; has_voted: boolean }
 interface ElectionList { session: string; dues_paid: boolean; elections: ElectionRow[] }
 
 
@@ -35,7 +34,7 @@ export function PortalElections() {
           <div className="election-actions">
             {e.status === 'nominations' && <Link className="button button-green" to={`/portal/elections/${e.id}`}>{e.my_candidacies.length ? 'Continue application' : 'Apply to contest'} <ArrowRight size={15}/></Link>}
             {e.status === 'voting' && (e.has_voted ? <span className="voted-chip"><Check size={14}/> You have voted</span> : <Link className="button button-green" to={`/portal/elections/${e.id}`}>Vote now <ArrowRight size={15}/></Link>)}
-            {e.status === 'closed' && <Link className="button button-outline" to={`/portal/elections/${e.id}`}>View results <ArrowRight size={15}/></Link>}
+            {(e.status === 'closed' || (e.status === 'voting' && e.live_results === 1)) && <Link className="button button-outline" to={`/portal/elections/${e.id}/results`}>{e.status === 'closed' ? 'View results' : 'Live results'} <ArrowRight size={15}/></Link>}
           </div>
         </div>
       </article>)}</div>}
@@ -93,7 +92,7 @@ export function PortalBallot() {
     <header className="election-hero"><Link className="exec-back" to="/portal/elections"><ArrowLeft size={14}/> All elections</Link><div className="election-hero-main"><div><Pill value={d.election.status}/><h1>{d.election.title}</h1>{d.election.description && <p>{d.election.description}</p>}</div><PhaseSteps status={d.election.status}/></div>
       <dl className="election-facts"><div><dt><CalendarClock size={13}/> Voting</dt><dd>{when(d.election.opens_at)} to {when(d.election.closes_at)}</dd></div><div><dt><Ticket size={13}/> Candidate form</dt><dd>{d.election.form_fee_minor > 0 ? naira(d.election.form_fee_minor) : 'Free'}</dd></div></dl></header>
     {d.election.status === 'nominations' && <ApplySection d={d} id={id} onChanged={() => void client.invalidateQueries({ queryKey: ['portal', 'elections'] })}/>}
-    {d.election.status === 'nominations' ? null : d.results ? <LiveResults path={`portal/elections/${id}/results`} queryKey={['portal', 'elections', id, 'results']} live={false} closed/> : <>
+    {d.election.status === 'nominations' ? null : d.results ? <Navigate to={`/portal/elections/${id}/results`} replace/> : <>
       {!d.can_vote && <div className="notice-bar"><Lock size={16}/><span>{d.reason}</span></div>}
       {d.positions.length === 0 ? <Panel><EmptyState title="No candidates yet" text="Screened candidates will appear here once voting opens." icon={<Vote size={22}/>}/></Panel> :
         d.positions.map(p => <Panel key={p.id} title={p.title}>
@@ -107,7 +106,7 @@ export function PortalBallot() {
         </Panel>)}
       {d.can_vote && <div className="ballot-bar"><span>{Object.values(choice).filter(Boolean).length} selected. You can leave a position empty.</span><button className="button button-green" disabled={!Object.values(choice).some(Boolean) || busy} onClick={() => setConfirm(true)}>Review and submit</button></div>}
     </>}
-    {d.election.status === 'voting' && d.election.live_results === 1 && <LiveResults path={`portal/elections/${id}/results`} queryKey={['portal', 'elections', id, 'results']} live/>}
+    {d.election.status === 'voting' && d.election.live_results === 1 && <div className="results-link"><div><b>Watch the results live</b><small>Votes appear here as members cast them.</small></div><Link className="button button-green btn-sm" to={`/portal/elections/${id}/results`}>Open results page <ArrowRight size={14}/></Link></div>}
     {reading && <div className="modal-scrim" role="presentation" onClick={() => setReading(null)}><section className="workspace-panel confirm-modal reading-modal" role="dialog" aria-modal="true" aria-label={`${reading.name} manifesto`} onClick={e => e.stopPropagation()}>
       <div className="reading-head"><span className="reading-photo">{reading.photo ? <img src={reading.photo} alt=""/> : <b>{reading.name[0]}</b>}</span><div><h2>{reading.name}</h2><small>Candidate for {reading.position}</small></div></div>
       <p>{reading.manifesto}</p><footer><button className="button button-green btn-sm" onClick={() => setReading(null)}>Close</button></footer></section></div>}

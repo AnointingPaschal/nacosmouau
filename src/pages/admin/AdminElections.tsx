@@ -7,7 +7,6 @@ import { api } from '../../lib/api';
 import { fromKobo, naira, toKobo, when } from '../../lib/money';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel, Pill, Stat } from '../../components/Workspace';
-import { LiveResults } from '../../components/LiveResults';
 
 interface Row { id: string; title: string; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; positions: number; candidates: number; eligible: number; votes: number }
 const toLocal = (iso?: string | null) => (iso ? iso.slice(0, 16) : '');
@@ -117,6 +116,6 @@ function ElectionDetail({ id }: { id: string }) {
           </div></article>)}</div></div>; })}
     </Panel>
     {editPos && <EditPosition electionId={id} position={editPos} onClose={() => setEditPos(null)} onDone={() => void refresh()}/>}
-    {(election.status === 'voting' || election.status === 'closed') && <LiveResults path={`staff/elections/${id}/results`} queryKey={['staff', 'elections', id, 'results']} live={election.status === 'voting'} closed={election.status === 'closed'} title={election.status === 'closed' ? 'Final results' : 'Live results (admin view)'}/>}
+    {(election.status === 'voting' || election.status === 'closed') && <div className="results-link"><div><b>{election.status === 'closed' ? 'Final results' : 'Live results'}</b><small>Winners, turnout and the full breakdown on their own page.</small></div><Link className="button button-green btn-sm" to={`/admin/elections/${id}/results`}>Open results page <ArrowRight size={14}/></Link></div>}
   </>;
 }
