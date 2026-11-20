@@ -19,7 +19,7 @@ const welcomeSlides: HeroSlide[] = [
   },
   {
     id: 'welcome-advanced-computing',
-    image_url: '/hero/feature.jpg',
+    image_url: '/hero/carousel-1-1600.jpg',
     badge: 'Part of NACOS National',
     title: 'Towards advanced\ncomputing.',
     subtitle: 'We develop. We create. We build capacity. Connect with the NACOS community at MOUAU.',
@@ -30,7 +30,7 @@ const welcomeSlides: HeroSlide[] = [
 ];
 
 function srcSetFor(url: string) {
-  const match = url.match(/^\/hero\/(carousel-2)-1600\.jpg$/);
+  const match = url.match(/^\/hero\/(carousel-[12])-1600\.jpg$/);
   return match ? `/hero/${match[1]}-800.jpg 800w, /hero/${match[1]}-1600.jpg 1600w` : undefined;
 }
 
@@ -51,7 +51,7 @@ function SlidePhoto({ slide, active, first }: { slide: HeroSlide; active: boolea
     className={`hx-photo${active ? ' is-active' : ''}`}
     src={slide.image_url}
     srcSet={srcSetFor(slide.image_url)}
-    sizes="(max-width: 900px) 100vw, 46vw"
+    sizes="100vw"
     alt=""
     aria-hidden="true"
     decoding="async"
@@ -87,28 +87,24 @@ export function HeroSlider({ slides, isLoading = false }: { slides?: HeroSlide[]
   if (isLoading && !slides?.length) return <section className="hx"><div className="hx-skeleton"><LoadingState label="Loading chapter welcome…"/></div></section>;
   const slide = slidesToShow[index] ?? welcomeSlides[0];
   const titleLines = slide.title.replace(/\\n/g, '\n').split(/\r?\n/);
-  const count = String(slidesToShow.length).padStart(2, '0');
 
   return <section className="hx" aria-roledescription="carousel" aria-label="NACOS MOUAU highlights" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-    <div className="hx-grid">
+    <div className="hx-bg">
+      {slidesToShow.map((item, itemIndex) => <SlidePhoto key={item.id} slide={item} active={itemIndex === index} first={itemIndex === 0}/>)}
+    </div>
+    <div className="hx-overlay"/>
+    <div className="hx-inner">
       <div className="hx-copy" key={slide.id}>
-        {slide.badge && <span className="hx-badge"><i/>{slide.badge}</span>}
+        {slide.badge && <span className="hx-badge">{slide.badge}</span>}
         <h1>{titleLines.map((line, lineIndex) => <span key={`${slide.id}-${lineIndex}`} className={lineIndex > 0 ? 'hx-title-alt' : undefined}>{line}</span>)}</h1>
         <p>{slide.subtitle}</p>
         <div className="hx-actions">{slide.primary_cta_text && <Action href={slide.primary_cta_link || '/register'}>{slide.primary_cta_text}</Action>}{slide.secondary_cta_text && <Action secondary href={slide.secondary_cta_link || '/verify'}>{slide.secondary_cta_text}</Action>}</div>
-        {slidesToShow.length > 1 && <div className="hx-controls">
-          <span className="hx-counter">{String(index + 1).padStart(2, '0')}<em> / {count}</em></span>
-          <div className="hx-dots" role="tablist" aria-label="Choose slide">{slidesToShow.map((item, itemIndex) => <button key={item.id} className={itemIndex === index ? 'active' : ''} aria-label={`Show slide ${itemIndex + 1}`} aria-selected={itemIndex === index} onClick={() => setIndex(itemIndex)}/>)}</div>
-          <button className="hx-arrow" onClick={() => move(-1)} aria-label="Previous slide"><ArrowLeft size={18}/></button>
-          <button className="hx-arrow" onClick={() => move(1)} aria-label="Next slide"><ArrowRight size={18}/></button>
-        </div>}
-      </div>
-      <div className="hx-frame">
-        <div className="hx-arch">
-          {slidesToShow.map((item, itemIndex) => <SlidePhoto key={item.id} slide={item} active={itemIndex === index} first={itemIndex === 0}/>)}
-        </div>
-        <svg className="hx-seal" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="seal-path" d="M60,60 m-42,0 a42,42 0 1,1 84,0 a42,42 0 1,1 -84,0"/></defs><text><textPath href="#seal-path" startOffset="0">NACOS · MOUAU · UMUDIKE · 2025/26 ·</textPath></text></svg>
       </div>
     </div>
+    {slidesToShow.length > 1 && <>
+      <button className="hx-arrow hx-prev" onClick={() => move(-1)} aria-label="Previous slide"><ArrowLeft size={22}/></button>
+      <button className="hx-arrow hx-next" onClick={() => move(1)} aria-label="Next slide"><ArrowRight size={22}/></button>
+      <div className="hx-dots" role="tablist" aria-label="Choose slide">{slidesToShow.map((item, itemIndex) => <button key={item.id} className={itemIndex === index ? 'active' : ''} aria-label={`Show slide ${itemIndex + 1}`} aria-selected={itemIndex === index} onClick={() => setIndex(itemIndex)}/>)}</div>
+    </>}
   </section>;
 }
