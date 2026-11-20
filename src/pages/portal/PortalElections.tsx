@@ -1,51 +1,17 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Camera, Check, Lock, Trophy, Vote } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarClock, Check, Lock, Ticket, Trophy, Vote } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/api';
 import { naira, when } from '../../lib/money';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel, Pill } from '../../components/Workspace';
-import { FileUpload } from '../../components/FileUpload';
-import { PayPanel, usePayInfo } from './PayPanel';
+import { CandidacyFlow, PhaseSteps, levelsText, type Candidacy, type Position } from './Candidacy';
 
-interface Candidacy { id: string; status: string; screening_note: string | null; position: string; manifesto: string; photo_url: string | null }
 interface ElectionRow { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; my_candidacies: Candidacy[]; has_voted: boolean }
 interface ElectionList { session: string; dues_paid: boolean; elections: ElectionRow[] }
 
-
-function CandidacyEditor({ candidacy }: { candidacy: Candidacy }) {
-  const client = useQueryClient(); const [open, setOpen] = useState(false); const [photo, setPhoto] = useState(''); const [manifesto, setManifesto] = useState(candidacy.manifesto); const [busy, setBusy] = useState(false);
-  const save = async (e: FormEvent) => {
-    e.preventDefault(); setBusy(true);
-    try { await api.post(`portal/candidacy/${candidacy.id}`, { manifesto, ...(photo ? { photo_url: photo } : {}) }); toast.success('Candidacy updated'); setPhoto(''); setOpen(false); await client.invalidateQueries({ queryKey: ['portal', 'elections'] }); }
-    catch (err) { toast.error(err instanceof Error ? err.message : 'Could not save'); } finally { setBusy(false); }
-  };
-  return <div className="cand-editor">
-    <div className="cand-editor-head"><span className="cand-thumb">{candidacy.photo_url ? <img src={candidacy.photo_url} alt="Your passport"/> : <Camera size={18}/>}</span><div><b>{candidacy.photo_url ? 'Your passport is set' : 'Add your passport'}</b><small>Members see it with your manifesto on the ballot.</small></div><button className="button button-outline btn-sm" onClick={() => setOpen(o => !o)}>{open ? 'Close' : candidacy.photo_url ? 'Change' : 'Add'}</button></div>
-    {open && <form className="form-stack" onSubmit={save}>
-      <div className="field"><span>Passport photo</span><FileUpload purpose="candidate" value={photo || candidacy.photo_url} accept="image/jpeg,image/png,image/webp" label="Upload a clear passport photo" onChange={f => setPhoto(f?.url ?? '')}/></div>
-      <label className="field"><span>Manifesto</span><textarea rows={5} value={manifesto} onChange={e => setManifesto(e.target.value)} minLength={20} required/></label>
-      <button className="button button-green" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
-    </form>}
-  </div>;
-}
-
-function CandidacyForm({ candidacy, fee, editable }: { candidacy: Candidacy; fee: number; editable: boolean }) {
-  const info = usePayInfo(); const [open, setOpen] = useState(false);
-  return <div className="candidacy">
-    <div className="candidacy-head"><div><strong>{candidacy.position}</strong><small>Your candidacy</small></div><Pill value={candidacy.status}/></div>
-    {candidacy.screening_note && <p className="form-note">Screening note: {candidacy.screening_note}</p>}
-    {candidacy.status === 'pending_payment' && <>
-      <p className="form-note">Pay the candidate form fee of <b>{naira(fee)}</b> so the electoral committee can screen you.</p>
-      {open && info.data ? <PayPanel purpose="candidate_form" refId={candidacy.id} amountMinor={fee} info={info.data} onDone={() => setOpen(false)}/> : <button className="button button-green" onClick={() => setOpen(true)}>Pay candidate form</button>}
-    </>}
-    {candidacy.status === 'pending_screening' && <p className="form-note">Payment received. The committee is screening your form.</p>}
-    {candidacy.status === 'eligible' && <p className="form-note">You have been cleared as a candidate.</p>}
-    {editable && candidacy.status !== 'rejected' && <CandidacyEditor candidacy={candidacy}/>}
-  </div>;
-}
 
 export function PortalElections() {
   const q = useQuery({ queryKey: ['portal', 'elections'], queryFn: ({ signal }) => api.get<ElectionList>('portal/elections', signal), retry: false });
@@ -53,22 +19,61 @@ export function PortalElections() {
   if (q.error || !q.data) return <ErrorState error={q.error}/>;
   const { elections, dues_paid, session } = q.data;
   return <>
-    <PageTitle eyebrow="MEMBER SPACE" title="Elections" description="Pay for your candidate form, and vote when voting is open."/>
+    <PageTitle eyebrow="MEMBER SPACE" title="Elections" description="Apply to contest, buy your candidate form and vote when voting opens."/>
     {!dues_paid && <div className="notice-bar"><Lock size={16}/><span>Only members who have paid {session} NACOS dues can vote. <Link to="/portal/payments">Pay your dues</Link></span></div>}
     {elections.length === 0 ? <Panel><EmptyState title="No elections right now" text="When the electoral committee opens an election, it will appear here." icon={<Vote size={22}/>}/></Panel> :
-      <div className="election-grid">{elections.map(e => <Panel key={e.id} className="election-card">
-        <div className="election-top"><div><h2>{e.title}</h2>{e.description && <p>{e.description}</p>}</div><Pill value={e.status}/></div>
-        <small className="election-dates">{when(e.opens_at)} to {when(e.closes_at)}</small>
-        {e.my_candidacies.map(c => <CandidacyForm key={c.id} candidacy={c} fee={e.form_fee_minor} editable={e.status === 'draft' || e.status === 'nominations'}/>)}
-        <div className="election-actions">
-          {e.status === 'voting' && (e.has_voted ? <span className="voted-chip"><Check size={14}/> You have voted</span> : <Link className="button button-green" to={`/portal/elections/${e.id}`}>Vote now <ArrowRight size={15}/></Link>)}
-          {e.status !== 'voting' && <Link className="text-action" to={`/portal/elections/${e.id}`}>{e.status === 'closed' ? 'View results' : 'View details'} <ArrowRight size={14}/></Link>}
+      <div className="election-grid">{elections.map(e => <article key={e.id} className="election-card">
+        <header className="election-banner"><div><Pill value={e.status}/><h2>{e.title}</h2></div><PhaseSteps status={e.status}/></header>
+        <div className="election-body">
+          {e.description && <p>{e.description}</p>}
+          <dl className="election-facts">
+            <div><dt><CalendarClock size={13}/> Voting</dt><dd>{when(e.opens_at)} to {when(e.closes_at)}</dd></div>
+            <div><dt><Ticket size={13}/> Candidate form</dt><dd>{e.form_fee_minor > 0 ? naira(e.form_fee_minor) : 'Free'}</dd></div>
+          </dl>
+          {e.my_candidacies.map(c => <div className="my-candidacy" key={c.id}><span>You applied for <b>{c.position}</b></span><Pill value={c.status}/></div>)}
+          <div className="election-actions">
+            {e.status === 'nominations' && <Link className="button button-green" to={`/portal/elections/${e.id}`}>{e.my_candidacies.length ? 'Continue application' : 'Apply to contest'} <ArrowRight size={15}/></Link>}
+            {e.status === 'voting' && (e.has_voted ? <span className="voted-chip"><Check size={14}/> You have voted</span> : <Link className="button button-green" to={`/portal/elections/${e.id}`}>Vote now <ArrowRight size={15}/></Link>)}
+            {e.status === 'closed' && <Link className="button button-outline" to={`/portal/elections/${e.id}`}>View results <ArrowRight size={15}/></Link>}
+          </div>
         </div>
-      </Panel>)}</div>}
+      </article>)}</div>}
   </>;
 }
 
-interface Detail { election: { id: string; title: string; description: string | null; status: string; closes_at: string | null }; positions: Array<{ id: string; title: string; candidates: Array<{ id: string; display_name: string; manifesto: string; photo_url: string | null }> }>; can_vote: boolean; reason: string; has_voted: boolean; results?: { turnout: number; positions: Array<{ id: string; title: string; candidates: Array<{ id: string; display_name: string; votes: number }> }> } }
+interface Detail {
+  election: { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number };
+  positions: Array<Position & { candidates: Array<{ id: string; display_name: string; manifesto: string; photo_url: string | null }> }>;
+  can_vote: boolean; reason: string; has_voted: boolean; can_apply: boolean; my_level: string | null; my_candidacies: Array<Candidacy & { position_id: string }>;
+  results?: { turnout: number; positions: Array<{ id: string; title: string; candidates: Array<{ id: string; display_name: string; votes: number }> }> };
+}
+
+/** Positions a member can apply for, and the steps for an application already started. */
+function ApplySection({ d, id, onChanged }: { d: Detail; id: string; onChanged: () => void }) {
+  const [busy, setBusy] = useState('');
+  const mine = d.my_candidacies; const fee = d.election.form_fee_minor;
+  const apply = async (positionId: string) => {
+    setBusy(positionId);
+    try { await api.post(`portal/elections/${id}/apply`, { position_id: positionId }); toast.success(fee > 0 ? 'Applied. Now buy your candidate form.' : 'Application received.'); onChanged(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Could not apply'); } finally { setBusy(''); }
+  };
+  return <>
+    {mine.map(c => <Panel key={c.id} title="Your application"><CandidacyFlow candidacy={{ ...c, position: d.positions.find(p => p.id === c.position_id)?.title ?? '' }} fee={fee} editable={d.can_apply} onChanged={onChanged}/></Panel>)}
+    {mine.length === 0 && (d.can_apply ? <Panel title="Contest for a post">
+      <p className="form-note">Pick the post you want. You buy the candidate form ({fee > 0 ? naira(fee) : 'free'}), add your passport and manifesto, then the committee screens you.</p>
+      <div className="position-grid">{d.positions.map(p => {
+        const ok = !p.eligible_levels || (d.my_level !== null && p.eligible_levels.split(',').includes(d.my_level));
+        return <article key={p.id} className={`position-card${ok ? '' : ' is-locked'}`}>
+          <h3>{p.title}</h3>
+          <div className="chips"><i>{levelsText(p.eligible_levels)}</i></div>
+          {ok ? <button className="button button-green" disabled={busy !== ''} onClick={() => void apply(p.id)}>{busy === p.id ? 'Applying…' : fee > 0 ? `Buy form · ${naira(fee)}` : 'Apply'}</button>
+            : <p className="form-note"><Lock size={13}/> Only {p.eligible_levels?.split(',').join(', ')} level members can contest.</p>}
+        </article>; })}
+        {d.positions.length === 0 && <p className="form-note">Posts have not been added yet.</p>}
+      </div>
+    </Panel> : <Panel><EmptyState title="Applications are not open" text="The electoral committee will open nominations soon." icon={<Vote size={22}/>}/></Panel>)}
+  </>;
+}
 
 export function PortalBallot() {
   const { id = '' } = useParams(); const navigate = useNavigate(); const client = useQueryClient();
@@ -84,8 +89,10 @@ export function PortalBallot() {
     finally { setBusy(false); }
   };
   return <>
-    <PageTitle eyebrow="ELECTION" title={d.election.title} description={d.election.description ?? undefined} action={<Link className="text-action" to="/portal/elections"><ArrowLeft size={14}/> All elections</Link>}/>
-    {d.results ? <div className="results-grid">{d.results.positions.map(p => { const max = Math.max(1, ...p.candidates.map(c => c.votes)); return <Panel key={p.id} title={p.title}>{p.candidates.length === 0 ? <p className="form-note">No candidates.</p> : p.candidates.map((c, i) => <div className="result-row" key={c.id}><div className="result-name">{i === 0 && c.votes > 0 && <Trophy size={14}/>}<span>{c.display_name}</span><b>{c.votes}</b></div><div className="result-bar"><i style={{ width: `${(c.votes / max) * 100}%` }}/></div></div>)}</Panel>; })}<p className="form-note">Turnout: {d.results.turnout} voters.</p></div> : <>
+    <header className="election-hero"><Link className="exec-back" to="/portal/elections"><ArrowLeft size={14}/> All elections</Link><div className="election-hero-main"><div><Pill value={d.election.status}/><h1>{d.election.title}</h1>{d.election.description && <p>{d.election.description}</p>}</div><PhaseSteps status={d.election.status}/></div>
+      <dl className="election-facts"><div><dt><CalendarClock size={13}/> Voting</dt><dd>{when(d.election.opens_at)} to {when(d.election.closes_at)}</dd></div><div><dt><Ticket size={13}/> Candidate form</dt><dd>{d.election.form_fee_minor > 0 ? naira(d.election.form_fee_minor) : 'Free'}</dd></div></dl></header>
+    {d.election.status === 'nominations' && <ApplySection d={d} id={id} onChanged={() => void client.invalidateQueries({ queryKey: ['portal', 'elections'] })}/>}
+    {d.election.status === 'nominations' ? null : d.results ? <div className="results-grid">{d.results.positions.map(p => { const max = Math.max(1, ...p.candidates.map(c => c.votes)); return <Panel key={p.id} title={p.title}>{p.candidates.length === 0 ? <p className="form-note">No candidates.</p> : p.candidates.map((c, i) => <div className="result-row" key={c.id}><div className="result-name">{i === 0 && c.votes > 0 && <Trophy size={14}/>}<span>{c.display_name}</span><b>{c.votes}</b></div><div className="result-bar"><i style={{ width: `${(c.votes / max) * 100}%` }}/></div></div>)}</Panel>; })}<p className="form-note">Turnout: {d.results.turnout} voters.</p></div> : <>
       {!d.can_vote && <div className="notice-bar"><Lock size={16}/><span>{d.reason}</span></div>}
       {d.positions.length === 0 ? <Panel><EmptyState title="No candidates yet" text="Screened candidates will appear here once voting opens." icon={<Vote size={22}/>}/></Panel> :
         d.positions.map(p => <Panel key={p.id} title={p.title}>

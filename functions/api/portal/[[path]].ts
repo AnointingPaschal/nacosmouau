@@ -34,6 +34,31 @@ async function digitalId(env: Env, user: Me) {
   return json({ full_name: me?.full_name, matric_number: me?.matric_number, academic_level: me?.academic_level, status: me?.status, session, membership_id: membership?.membership_id ?? null, issued_at: membership?.started_at ?? null, dues_paid: paid, photo_url: me?.profile_photo_key ? `/api/files/${me.profile_photo_key}` : null });
 }
 
+async function applyForPosition(request: Request, env: Env, user: Me, electionId: string) {
+  const election = await env.DB.prepare('SELECT status,form_fee_minor FROM elections WHERE id=?').bind(electionId).first<{ status: string; form_fee_minor: number }>();
+  if (!election) return fail('Election not found.', 404);
+  if (election.status !== 'nominations') return fail('Applications are not open for this election.', 409);
+  const body = await readBody(request); const positionId = String(body?.position_id ?? '');
+  const position = await env.DB.prepare('SELECT title,eligible_levels FROM election_positions WHERE id=? AND election_id=?').bind(positionId, electionId).first<{ title: string; eligible_levels: string | null }>();
+  if (!position) return fail('Choose a position to contest for.');
+  const me = await env.DB.prepare('SELECT u.full_name,u.academic_level,p.profile_photo_key FROM users u LEFT JOIN member_profiles p ON p.user_id=u.id WHERE u.id=?').bind(user.id).first<{ full_name: string; academic_level: string | null; profile_photo_key: string | null }>();
+  if (position.eligible_levels && !(me?.academic_level && position.eligible_levels.split(',').includes(me.academic_level))) return fail(`${position.title} is open to ${position.eligible_levels.split(',').join(', ')} level members only.`, 403);
+  if (await env.DB.prepare('SELECT 1 FROM election_candidates WHERE election_id=? AND user_id=?').bind(electionId, user.id).first()) return fail('You have already applied in this election.', 409);
+  const id = randomId(); const status = election.form_fee_minor > 0 ? 'pending_payment' : 'pending_screening';
+  await env.DB.prepare('INSERT INTO election_candidates(id,election_id,position_id,user_id,display_name,manifesto,photo_key,status) VALUES(?,?,?,?,?,?,?,?)')
+    .bind(id, electionId, positionId, user.id, me?.full_name ?? 'Member', 'Manifesto to be provided.', me?.profile_photo_key ?? null, status).run();
+  await audit(env, user.id, 'apply', 'election_candidates', id, { election: electionId, position: positionId });
+  return json({ id, status }, 201);
+}
+
+async function withdrawCandidacy(env: Env, user: Me, id: string) {
+  const row = await env.DB.prepare("SELECT c.status,e.status AS election_status,(SELECT COUNT(*) FROM payments p WHERE p.ref_id=c.id AND p.purpose='candidate_form' AND p.status IN ('pending','successful')) paid FROM election_candidates c JOIN elections e ON e.id=c.election_id WHERE c.id=? AND c.user_id=?").bind(id, user.id).first<{ status: string; election_status: string; paid: number }>();
+  if (!row) return fail('Candidacy not found.', 404);
+  if (row.election_status !== 'nominations' || row.paid > 0 || row.status !== 'pending_payment') return fail('You can only withdraw before paying for the form.', 409);
+  await env.DB.prepare('DELETE FROM election_candidates WHERE id=?').bind(id).run();
+  return json({ ok: true });
+}
+
 async function updateCandidacy(request: Request, env: Env, user: Me, id: string) {
   const row = await env.DB.prepare('SELECT c.status,e.status AS election_status FROM election_candidates c JOIN elections e ON e.id=c.election_id WHERE c.id=? AND c.user_id=?').bind(id, user.id).first<{ status: string; election_status: string }>();
   if (!row) return fail('Candidacy not found.', 404);
@@ -130,7 +155,7 @@ async function electionDetail(env: Env, user: Me, id: string) {
   const [paid, voted, positions, candidates] = await Promise.all([
     duesPaid(env, user.id, session),
     env.DB.prepare('SELECT 1 FROM election_voters WHERE election_id=? AND user_id=?').bind(id, user.id).first(),
-    env.DB.prepare('SELECT id,title FROM election_positions WHERE election_id=? ORDER BY display_order,title').bind(id).all<{ id: string; title: string }>(),
+    env.DB.prepare('SELECT id,title,eligible_levels FROM election_positions WHERE election_id=? ORDER BY display_order,title').bind(id).all<{ id: string; title: string; eligible_levels: string | null }>(),
     env.DB.prepare("SELECT id,position_id,display_name,manifesto,photo_key FROM election_candidates WHERE election_id=? AND status='eligible' ORDER BY display_name").bind(id).all<Record<string, unknown>>(),
   ]);
   const now = new Date().toISOString();
@@ -141,7 +166,15 @@ async function electionDetail(env: Env, user: Me, id: string) {
   else if (!paid) reason = `Only members who have paid ${session} NACOS dues can vote.`;
   else if (voted) reason = 'You have already voted in this election.';
   const grouped = (positions.results ?? []).map(p => ({ ...p, candidates: (candidates.results ?? []).filter(c => c.position_id === p.id).map(c => ({ id: c.id, display_name: c.display_name, manifesto: c.manifesto, photo_url: publicPhoto(c.photo_key) })) }));
-  const out: Record<string, unknown> = { election, positions: grouped, can_vote: !reason, reason, has_voted: Boolean(voted), dues_paid: paid };
+  const [me, mine] = await Promise.all([
+    env.DB.prepare('SELECT academic_level FROM users WHERE id=?').bind(user.id).first<{ academic_level: string | null }>(),
+    env.DB.prepare('SELECT id,position_id,status,screening_note,display_name,manifesto,photo_key FROM election_candidates WHERE election_id=? AND user_id=?').bind(id, user.id).all<Record<string, unknown>>(),
+  ]);
+  const out: Record<string, unknown> = {
+    election, positions: grouped, can_vote: !reason, reason, has_voted: Boolean(voted), dues_paid: paid,
+    can_apply: election.status === 'nominations', my_level: me?.academic_level ?? null,
+    my_candidacies: (mine.results ?? []).map(c => ({ ...c, photo_url: publicPhoto(c.photo_key), photo_key: undefined })),
+  };
   if (election.status === 'closed') out.results = await tally(env, id);
   return json(out);
 }
@@ -186,6 +219,8 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (a === 'payments' && !b && method === 'GET') return await payments(env, user);
     if (a === 'payments' && !b && method === 'POST') return await createPayment(request, env, user);
     if (a === 'payments' && b === 'verify' && method === 'POST') return await verifyPayment(request, env, user);
+    if (a === 'elections' && b && c === 'apply' && method === 'POST') return await applyForPosition(request, env, user, b);
+    if (a === 'candidacy' && b && c === 'withdraw' && method === 'POST') return await withdrawCandidacy(env, user, b);
     if (a === 'candidacy' && b && method === 'POST') return await updateCandidacy(request, env, user, b);
     if (a === 'elections' && !b && method === 'GET') return await electionList(env, user);
     if (a === 'elections' && b && !c && method === 'GET') return await electionDetail(env, user, b);
