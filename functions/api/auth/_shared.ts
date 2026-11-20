@@ -18,13 +18,35 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const [salt, expected] = stored.split(':'); if (!salt || !expected) return false;
   const actual = await passwordHash(password, salt); return actual === stored;
 }
+export type Space = 'admin' | 'member';
+const COOKIE_NAMES: Record<Space, string> = { member: 'nacos_session', admin: 'nacos_admin_session' };
+
+/** Admin and member areas keep separate sessions, so both can stay signed in on one device. */
+export function requestSpace(request: Request): Space {
+  const header = request.headers.get('X-Nacos-Space');
+  if (header === 'admin' || header === 'member') return header;
+  const referer = request.headers.get('Referer');
+  if (referer) { try { const path = new URL(referer).pathname; if (path === '/admin' || path.startsWith('/admin/')) return 'admin'; } catch { /* ignore bad referer */ } }
+  return 'member';
+}
+export function sessionToken(request: Request, space: Space = requestSpace(request)): string | null {
+  const name = `${COOKIE_NAMES[space]}=`;
+  const value = request.headers.get('Cookie')?.split(';').map(v => v.trim()).find(v => v.startsWith(name))?.slice(name.length);
+  return value ? decodeURIComponent(value) : null;
+}
 export async function currentUser(request: Request, env: Env) {
-  const token = request.headers.get('Cookie')?.split(';').map(v => v.trim()).find(v => v.startsWith('nacos_session='))?.slice('nacos_session='.length);
+  const token = sessionToken(request);
   if (!token) return null;
   return env.DB.prepare('SELECT u.id, u.email, u.full_name, u.role, u.status FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND s.expires_at > datetime(\'now\')')
-    .bind(await sha256(decodeURIComponent(token))).first<{id:string; email:string; full_name:string; role:string; status:string}>();
+    .bind(await sha256(token)).first<{id:string; email:string; full_name:string; role:string; status:string}>();
 }
-export function cookie(token: string, maxAge: number) { return `nacos_session=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
+export function cookie(token: string, maxAge: number, space: Space = 'member') { return `${COOKIE_NAMES[space]}=${encodeURIComponent(token)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
+export function clearCookie(space: Space) { return `${COOKIE_NAMES[space]}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`; }
+export async function isStaff(env: Env, user: { id: string; role: string }) {
+  if (user.role === 'admin' || user.role === 'super_admin') return true;
+  const row = await env.DB.prepare("SELECT 1 AS ok FROM user_roles WHERE user_id=? AND role_id<>'member' LIMIT 1").bind(user.id).first();
+  return Boolean(row);
+}
 
 export async function hasPermission(env: Env, user: { id: string; role: string }, resource: string, action: string): Promise<boolean> {
   if (user.role === 'super_admin' || user.role === 'admin') return true;

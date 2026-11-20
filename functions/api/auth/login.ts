@@ -1,4 +1,4 @@
-import { Env, cookie, fail, json, randomId, sha256, verifyPassword } from './_shared';
+import { Env, cookie, isStaff, fail, json, randomId, sha256, verifyPassword } from './_shared';
 
 type LoginUser = { id: string; email: string; password_hash: string; full_name: string; role: string; status: string };
 
@@ -30,13 +30,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
   if (user.status !== 'active') return fail('Your account is awaiting approval or is unavailable.', 403);
 
+  const space = body && (body as { space?: unknown }).space === 'admin' ? 'admin' : 'member';
+  if (space === 'admin' && !(await isStaff(env, user))) return fail('This account does not have administration access.', 403);
   try {
     const token = `${randomId()}${randomId().replaceAll('-', '')}`;
     const expiry = new Date(Date.now() + 7 * 86400000).toISOString();
     await env.DB.prepare('INSERT INTO sessions (id_hash,user_id,expires_at) VALUES (?,?,?)')
       .bind(await sha256(token), user.id, expiry).run();
     return json({ user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role } }, 200, {
-      'Set-Cookie': cookie(token, 7 * 86400),
+      'Set-Cookie': cookie(token, 7 * 86400, space),
     });
   } catch (error) {
     console.error('Login session creation failed:', error);

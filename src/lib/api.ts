@@ -12,6 +12,7 @@ export const isApiUnavailable = (error: unknown): error is ApiUnavailableError =
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  headers.set('X-Nacos-Space', /^\/admin(\/|$)/.test(window.location.pathname) ? 'admin' : 'member');
   const method = (init.method ?? 'GET').toUpperCase();
   let response: Response;
   try {
