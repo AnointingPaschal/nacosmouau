@@ -16,3 +16,5 @@
 - Database changes are additive SQL migrations. Never seed fabricated association statistics or transaction records.
 - Public-facing site content is persisted in the CMS and editable by authorized administrators.
 - Protect ballots by separating voter participation from encrypted/opaque ballot selections.
+
+- Media storage: public images are committed to GitHub (`media/uploads/...`) via `functions/api/_storage.ts` and served by `/api/files/*`; private files (profile photos, documents) stay in R2. Needs the `GITHUB_TOKEN` Pages secret.

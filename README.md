@@ -10,7 +10,8 @@ This project uses `wrangler.jsonc` as the Pages Functions configuration source o
 2. Put the returned database UUID in `wrangler.jsonc` under the `DB` binding. The current repository is configured with the supplied database ID.
 3. Apply migrations after authenticating Wrangler: `npx wrangler login`, then `npx wrangler d1 migrations apply nacos-mouau --remote`.
 4. Configure the initial administrator secret in Cloudflare Pages → Settings → Variables and Secrets. Add `SETUP_TOKEN` as a secret for production and redeploy. Use a long random value; never put it in this repository. The `/setup` flow is available only while the D1 database has no users.
-5. Create the R2 bucket with `npx wrangler r2 bucket create nacos-mouau-media` before deploying; `wrangler.jsonc` binds it as `BUCKET`.
+5. Public images (logo, slides, news, events, gallery, executives) are saved to the GitHub repository under `media/` and served through `/api/files`. Create a fine-grained GitHub token with Contents: Read & Write on this repository and add it as the encrypted Pages secret `GITHUB_TOKEN`. `GITHUB_REPO` and `GITHUB_BRANCH` are set under `vars` in `wrangler.jsonc`. Upload commits include `[skip ci]` so they do not trigger a rebuild.
+5a. Private files (member profile photos and documents) must not go to a public repository, so they still use the R2 bucket. Create the R2 bucket with `npx wrangler r2 bucket create nacos-mouau-media` before deploying; `wrangler.jsonc` binds it as `BUCKET`.
 6. Configure provider secrets through Cloudflare Pages secrets. Session cookies use the existing D1-backed authentication flow; no `SESSION_SECRET` is required. Never put secrets in Vite variables.
 
 ## Manual initial administrator recovery
@@ -40,4 +41,4 @@ CMS resource APIs are backed by D1 and admin mutations write audit records. The 
 
 ### Cloudflare secrets
 
-Set `PAYSTACK_SECRET_KEY`, `CLOUDFLARE_TURNSTILE_SECRET`, and `EMAIL_PROVIDER_API_KEY` as encrypted Cloudflare Pages secrets (or with `wrangler pages secret put`). They are intentionally absent from the checked-in configuration. Set `APP_URL` and `PAYSTACK_PUBLIC_KEY` under `vars` for each environment.
+Set `GITHUB_TOKEN`, `PAYSTACK_SECRET_KEY`, `CLOUDFLARE_TURNSTILE_SECRET`, and `EMAIL_PROVIDER_API_KEY` as encrypted Cloudflare Pages secrets (or with `wrangler pages secret put`). They are intentionally absent from the checked-in configuration. Set `APP_URL` and `PAYSTACK_PUBLIC_KEY` under `vars` for each environment.

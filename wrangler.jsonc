@@ -16,6 +16,8 @@
   ],
   "vars": {
     "APP_URL": "https://nacos-mouau-platform.pages.dev",
-    "PAYSTACK_PUBLIC_KEY": ""
+    "PAYSTACK_PUBLIC_KEY": "",
+    "GITHUB_REPO": "AnointingPaschal/nacosmouau",
+    "GITHUB_BRANCH": "main"
   }
 }

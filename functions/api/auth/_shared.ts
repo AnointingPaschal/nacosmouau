@@ -1,4 +1,4 @@
-export interface Env { DB: D1Database; BUCKET?: R2Bucket; SETUP_TOKEN?: string; APP_URL?: string; PAYSTACK_SECRET_KEY?: string; PAYSTACK_PUBLIC_KEY?: string; CLOUDFLARE_TURNSTILE_SECRET?: string; EMAIL_PROVIDER_API_KEY?: string }
+export interface Env { DB: D1Database; BUCKET?: R2Bucket; GITHUB_TOKEN?: string; GITHUB_REPO?: string; GITHUB_BRANCH?: string; SETUP_TOKEN?: string; APP_URL?: string; PAYSTACK_SECRET_KEY?: string; PAYSTACK_PUBLIC_KEY?: string; CLOUDFLARE_TURNSTILE_SECRET?: string; EMAIL_PROVIDER_API_KEY?: string }
 // Cloudflare Workers rejects PBKDF2 deriveBits iteration counts above 100,000.
 // Keep this value in sync with scripts/generate_admin_sql.py.
 const PASSWORD_ITERATIONS = 100_000;
