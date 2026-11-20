@@ -1,19 +1,38 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Check, Lock, Trophy, Vote } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Camera, Check, Lock, Trophy, Vote } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/api';
 import { naira, when } from '../../lib/money';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel, Pill } from '../../components/Workspace';
+import { FileUpload } from '../../components/FileUpload';
 import { PayPanel, usePayInfo } from './PayPanel';
 
-interface Candidacy { id: string; status: string; screening_note: string | null; position: string }
+interface Candidacy { id: string; status: string; screening_note: string | null; position: string; manifesto: string; photo_url: string | null }
 interface ElectionRow { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; my_candidacies: Candidacy[]; has_voted: boolean }
 interface ElectionList { session: string; dues_paid: boolean; elections: ElectionRow[] }
 
-function CandidacyForm({ candidacy, fee }: { candidacy: Candidacy; fee: number }) {
+
+function CandidacyEditor({ candidacy }: { candidacy: Candidacy }) {
+  const client = useQueryClient(); const [open, setOpen] = useState(false); const [photo, setPhoto] = useState(''); const [manifesto, setManifesto] = useState(candidacy.manifesto); const [busy, setBusy] = useState(false);
+  const save = async (e: FormEvent) => {
+    e.preventDefault(); setBusy(true);
+    try { await api.post(`portal/candidacy/${candidacy.id}`, { manifesto, ...(photo ? { photo_url: photo } : {}) }); toast.success('Candidacy updated'); setPhoto(''); setOpen(false); await client.invalidateQueries({ queryKey: ['portal', 'elections'] }); }
+    catch (err) { toast.error(err instanceof Error ? err.message : 'Could not save'); } finally { setBusy(false); }
+  };
+  return <div className="cand-editor">
+    <div className="cand-editor-head"><span className="cand-thumb">{candidacy.photo_url ? <img src={candidacy.photo_url} alt="Your passport"/> : <Camera size={18}/>}</span><div><b>{candidacy.photo_url ? 'Your passport is set' : 'Add your passport'}</b><small>Members see it with your manifesto on the ballot.</small></div><button className="button button-outline btn-sm" onClick={() => setOpen(o => !o)}>{open ? 'Close' : candidacy.photo_url ? 'Change' : 'Add'}</button></div>
+    {open && <form className="form-stack" onSubmit={save}>
+      <div className="field"><span>Passport photo</span><FileUpload purpose="candidate" value={photo || candidacy.photo_url} accept="image/jpeg,image/png,image/webp" label="Upload a clear passport photo" onChange={f => setPhoto(f?.url ?? '')}/></div>
+      <label className="field"><span>Manifesto</span><textarea rows={5} value={manifesto} onChange={e => setManifesto(e.target.value)} minLength={20} required/></label>
+      <button className="button button-green" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+    </form>}
+  </div>;
+}
+
+function CandidacyForm({ candidacy, fee, editable }: { candidacy: Candidacy; fee: number; editable: boolean }) {
   const info = usePayInfo(); const [open, setOpen] = useState(false);
   return <div className="candidacy">
     <div className="candidacy-head"><div><strong>{candidacy.position}</strong><small>Your candidacy</small></div><Pill value={candidacy.status}/></div>
@@ -24,6 +43,7 @@ function CandidacyForm({ candidacy, fee }: { candidacy: Candidacy; fee: number }
     </>}
     {candidacy.status === 'pending_screening' && <p className="form-note">Payment received. The committee is screening your form.</p>}
     {candidacy.status === 'eligible' && <p className="form-note">You have been cleared as a candidate.</p>}
+    {editable && candidacy.status !== 'rejected' && <CandidacyEditor candidacy={candidacy}/>}
   </div>;
 }
 
@@ -39,7 +59,7 @@ export function PortalElections() {
       <div className="election-grid">{elections.map(e => <Panel key={e.id} className="election-card">
         <div className="election-top"><div><h2>{e.title}</h2>{e.description && <p>{e.description}</p>}</div><Pill value={e.status}/></div>
         <small className="election-dates">{when(e.opens_at)} to {when(e.closes_at)}</small>
-        {e.my_candidacies.map(c => <CandidacyForm key={c.id} candidacy={c} fee={e.form_fee_minor}/>)}
+        {e.my_candidacies.map(c => <CandidacyForm key={c.id} candidacy={c} fee={e.form_fee_minor} editable={e.status === 'draft' || e.status === 'nominations'}/>)}
         <div className="election-actions">
           {e.status === 'voting' && (e.has_voted ? <span className="voted-chip"><Check size={14}/> You have voted</span> : <Link className="button button-green" to={`/portal/elections/${e.id}`}>Vote now <ArrowRight size={15}/></Link>)}
           {e.status !== 'voting' && <Link className="text-action" to={`/portal/elections/${e.id}`}>{e.status === 'closed' ? 'View results' : 'View details'} <ArrowRight size={14}/></Link>}

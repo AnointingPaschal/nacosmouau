@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { api } from '../lib/api';
 
 export interface UploadedFile { url: string; key: string; filename: string; size: number; mimeType: string }
-export function FileUpload({value,onChange,accept='image/*',label='Choose a file',maxSizeMb=8,purpose='media'}:{value?:string|null;onChange:(file:UploadedFile|null)=>void;accept?:string;label?:string;maxSizeMb?:number;purpose?:'media'|'profile'|'document'|'proof'}) {
+export function FileUpload({value,onChange,accept='image/*',label='Choose a file',maxSizeMb=8,purpose='media'}:{value?:string|null;onChange:(file:UploadedFile|null)=>void;accept?:string;label?:string;maxSizeMb?:number;purpose?:'media'|'profile'|'document'|'proof'|'candidate'}) {
   const input=useRef<HTMLInputElement>(null); const [progress,setProgress]=useState<number|null>(null); const [dragging,setDragging]=useState(false);
   const image=accept.includes('image'); const allowed=accept.split(',').map(t=>t.trim());
   const upload=async(file?:File)=>{if(!file)return; const validType=allowed.some(type=>type.endsWith('/*')?file.type.startsWith(type.slice(0,-1)):file.type===type); if(!validType){toast.error('This file type is not allowed.');return;} if(file.size<=0||file.size>maxSizeMb*1024*1024){toast.error(`Choose a file smaller than ${maxSizeMb} MB.`);return;} setProgress(0);try{const saved=await api.upload<UploadedFile>(file,setProgress,purpose);onChange(saved);toast.success('File uploaded');}catch(error){toast.error(error instanceof Error?error.message:'Upload failed');}finally{setProgress(null);}};

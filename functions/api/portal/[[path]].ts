@@ -34,6 +34,19 @@ async function digitalId(env: Env, user: Me) {
   return json({ full_name: me?.full_name, matric_number: me?.matric_number, academic_level: me?.academic_level, status: me?.status, session, membership_id: membership?.membership_id ?? null, issued_at: membership?.started_at ?? null, dues_paid: paid, photo_url: me?.profile_photo_key ? `/api/files/${me.profile_photo_key}` : null });
 }
 
+async function updateCandidacy(request: Request, env: Env, user: Me, id: string) {
+  const row = await env.DB.prepare('SELECT c.status,e.status AS election_status FROM election_candidates c JOIN elections e ON e.id=c.election_id WHERE c.id=? AND c.user_id=?').bind(id, user.id).first<{ status: string; election_status: string }>();
+  if (!row) return fail('Candidacy not found.', 404);
+  if (!['draft', 'nominations'].includes(row.election_status) || row.status === 'rejected') return fail('You can no longer change this candidacy.', 409);
+  const body = await readBody(request); const sets: string[] = []; const vals: unknown[] = [];
+  if (typeof body?.manifesto === 'string') { const t = text(body.manifesto, 3000); if (t.length < 20) return fail('Write a manifesto of at least a few sentences.'); sets.push('manifesto=?'); vals.push(t); }
+  if (typeof body?.photo_url === 'string' && body.photo_url) { const key = fileKey(body.photo_url); if (!key) return fail('Upload your passport with the file picker.'); sets.push('photo_key=?'); vals.push(key); }
+  if (!sets.length) return fail('Nothing to update.');
+  await env.DB.prepare(`UPDATE election_candidates SET ${sets.join(',')} WHERE id=?`).bind(...vals, id).run();
+  await audit(env, user.id, 'update', 'election_candidates', id, { fields: sets.length });
+  return json({ ok: true });
+}
+
 async function payments(env: Env, user: Me) {
   const session = await currentSession(env);
   const [rows, amount, bank, state] = await Promise.all([
@@ -103,9 +116,9 @@ async function electionList(env: Env, user: Me) {
   ]);
   const out = [];
   for (const election of elections) {
-    const mine = await env.DB.prepare('SELECT c.id,c.status,c.screening_note,c.display_name,p.title AS position FROM election_candidates c JOIN election_positions p ON p.id=c.position_id WHERE c.election_id=? AND c.user_id=?').bind(election.id, user.id).all();
+    const mine = await env.DB.prepare('SELECT c.id,c.status,c.screening_note,c.display_name,c.manifesto,c.photo_key,p.title AS position FROM election_candidates c JOIN election_positions p ON p.id=c.position_id WHERE c.election_id=? AND c.user_id=?').bind(election.id, user.id).all();
     const voted = await env.DB.prepare('SELECT 1 FROM election_voters WHERE election_id=? AND user_id=?').bind(election.id, user.id).first();
-    out.push({ ...election, my_candidacies: mine.results ?? [], has_voted: Boolean(voted) });
+    out.push({ ...election, my_candidacies: (mine.results ?? []).map((c: Record<string, unknown>) => ({ ...c, photo_url: c.photo_key ? `/api/files/${c.photo_key}` : null, photo_key: undefined })), has_voted: Boolean(voted) });
   }
   return json({ session, dues_paid: paid, elections: out });
 }
@@ -173,6 +186,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (a === 'payments' && !b && method === 'GET') return await payments(env, user);
     if (a === 'payments' && !b && method === 'POST') return await createPayment(request, env, user);
     if (a === 'payments' && b === 'verify' && method === 'POST') return await verifyPayment(request, env, user);
+    if (a === 'candidacy' && b && method === 'POST') return await updateCandidacy(request, env, user, b);
     if (a === 'elections' && !b && method === 'GET') return await electionList(env, user);
     if (a === 'elections' && b && !c && method === 'GET') return await electionDetail(env, user, b);
     if (a === 'elections' && b && c === 'vote' && method === 'POST') return await vote(request, env, user, b);

@@ -8,7 +8,7 @@ const DEFAULT_REPO = 'AnointingPaschal/nacosmouau';
 const MEDIA_ROOT = 'media';
 
 export const githubEnabled = (env: Env) => Boolean(env.GITHUB_TOKEN);
-export const isPublicImage = (mime: string, purpose = 'media') => mime.startsWith('image/') && purpose !== 'profile' && purpose !== 'proof';
+export const isPublicImage = (mime: string, purpose = 'media') => mime.startsWith('image/') && purpose !== 'profile' && purpose !== 'proof' && purpose !== 'candidate';
 
 const repo = (env: Env) => env.GITHUB_REPO || DEFAULT_REPO;
 const branch = (env: Env) => env.GITHUB_BRANCH || 'main';
