@@ -110,15 +110,26 @@ export async function applyPaymentSuccess(env: Env, paymentId: string, reviewer:
 }
 
 export async function tally(env: Env, electionId: string) {
-  const [ballots, positions, candidates, turnout] = await Promise.all([
+  const election = await env.DB.prepare('SELECT session FROM elections WHERE id=?').bind(electionId).first<{ session: string | null }>();
+  const session = election?.session || await currentSession(env);
+  const [ballots, positions, candidates, turnout, eligible] = await Promise.all([
     env.DB.prepare('SELECT encrypted_selections s FROM election_ballots WHERE election_id=?').bind(electionId).all<{ s: string }>(),
     env.DB.prepare('SELECT id,title FROM election_positions WHERE election_id=? ORDER BY display_order,title').bind(electionId).all<{ id: string; title: string }>(),
-    env.DB.prepare("SELECT id,position_id,display_name FROM election_candidates WHERE election_id=? AND status='eligible'").bind(electionId).all<{ id: string; position_id: string; display_name: string }>(),
+    env.DB.prepare("SELECT id,position_id,display_name,photo_key FROM election_candidates WHERE election_id=? AND status='eligible'").bind(electionId).all<{ id: string; position_id: string; display_name: string; photo_key: string | null }>(),
     env.DB.prepare('SELECT COUNT(*) n FROM election_ballots WHERE election_id=?').bind(electionId).first<{ n: number }>(),
+    env.DB.prepare("SELECT COUNT(DISTINCT user_id) n FROM payments WHERE purpose='dues' AND session=? AND status='successful'").bind(session).first<{ n: number }>(),
   ]);
   const counts = new Map<string, number>();
   for (const ballot of ballots.results ?? []) { try { for (const candidateId of Object.values(JSON.parse(ballot.s) as Record<string, string>)) counts.set(candidateId, (counts.get(candidateId) ?? 0) + 1); } catch { /* ignore malformed ballot */ } }
-  return { turnout: turnout?.n ?? 0, positions: (positions.results ?? []).map(p => ({ id: p.id, title: p.title, candidates: (candidates.results ?? []).filter(c => c.position_id === p.id).map(c => ({ id: c.id, display_name: c.display_name, votes: counts.get(c.id) ?? 0 })).sort((a, b) => b.votes - a.votes) })) };
+  return {
+    turnout: turnout?.n ?? 0, eligible_voters: eligible?.n ?? 0, updated_at: new Date().toISOString(),
+    positions: (positions.results ?? []).map(p => {
+      const list = (candidates.results ?? []).filter(c => c.position_id === p.id)
+        .map(c => ({ id: c.id, display_name: c.display_name, votes: counts.get(c.id) ?? 0, photo_url: c.photo_key ? `/api/files/${c.photo_key}` : null }))
+        .sort((a, b) => b.votes - a.votes || a.display_name.localeCompare(b.display_name));
+      return { id: p.id, title: p.title, total: list.reduce((n, c) => n + c.votes, 0), candidates: list };
+    }),
+  };
 }
 
 

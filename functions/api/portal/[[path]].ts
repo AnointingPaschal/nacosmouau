@@ -136,7 +136,7 @@ async function verifyPayment(request: Request, env: Env, user: Me) {
 async function electionList(env: Env, user: Me) {
   const session = await currentSession(env);
   const [{ results: elections = [] }, paid] = await Promise.all([
-    env.DB.prepare("SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor FROM elections WHERE status<>'draft' ORDER BY created_at DESC").all<Record<string, unknown>>(),
+    env.DB.prepare("SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor,live_results FROM elections WHERE status<>'draft' ORDER BY created_at DESC").all<Record<string, unknown>>(),
     duesPaid(env, user.id, session),
   ]);
   const out = [];
@@ -149,7 +149,7 @@ async function electionList(env: Env, user: Me) {
 }
 
 async function electionDetail(env: Env, user: Me, id: string) {
-  const election = await env.DB.prepare("SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor FROM elections WHERE id=? AND status<>'draft'").bind(id).first<Record<string, unknown>>();
+  const election = await env.DB.prepare("SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor,live_results FROM elections WHERE id=? AND status<>'draft'").bind(id).first<Record<string, unknown>>();
   if (!election) return fail('Election not found.', 404);
   const session = await currentSession(env);
   const [paid, voted, positions, candidates] = await Promise.all([
@@ -224,6 +224,12 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (a === 'candidacy' && b && method === 'POST') return await updateCandidacy(request, env, user, b);
     if (a === 'elections' && !b && method === 'GET') return await electionList(env, user);
     if (a === 'elections' && b && !c && method === 'GET') return await electionDetail(env, user, b);
+    if (a === 'elections' && b && c === 'results' && method === 'GET') {
+      const el = await env.DB.prepare("SELECT status,live_results FROM elections WHERE id=? AND status<>'draft'").bind(b).first<{ status: string; live_results: number }>();
+      if (!el) return fail('Election not found.', 404);
+      if (!(el.status === 'closed' || (el.status === 'voting' && el.live_results === 1))) return fail('Results are not available to members yet.', 403);
+      return json({ ...(await tally(env, b)), status: el.status, live: el.status === 'voting' });
+    }
     if (a === 'elections' && b && c === 'vote' && method === 'POST') return await vote(request, env, user, b);
     if (a === 'events' && method === 'GET') {
       const rows = await env.DB.prepare('SELECT r.id,r.status,r.created_at,e.title,e.slug,e.starts_at,e.venue,e.image_key,(SELECT ticket_code FROM event_tickets t WHERE t.registration_id=r.id LIMIT 1) ticket_code FROM event_registrations r JOIN events e ON e.id=r.event_id WHERE r.user_id=? OR r.email=? ORDER BY e.starts_at DESC').bind(user.id, user.email).all<Record<string, unknown>>();

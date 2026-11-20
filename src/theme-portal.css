@@ -247,3 +247,29 @@
 .flow-steps li.is-done { background: var(--brand-soft); color: var(--brand-deep); } .flow-steps li.is-done span { background: var(--brand); color: #fff; }
 .flow-card { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); } .flow-card h3 { display: flex; align-items: center; gap: 8px; margin: 0; font: 900 16px var(--font-display); } .flow-card .form-note { margin: 0; }
 .notice-ok { background: var(--brand-soft); color: var(--brand-deep); }
+
+/* live results */
+.live-results { display: grid; gap: 16px; margin-top: 8px; }
+.lr-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.lr-head h2 { margin: 0 0 4px; font: 900 20px var(--font-display); }
+.lr-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--subtle); }
+.lr-status.is-live { color: #d92d20; } .lr-status.is-live svg { animation: lr-pulse 1.4s ease-in-out infinite; }
+@keyframes lr-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
+.lr-turnout { display: flex; align-items: center; gap: 12px; animation: lr-pop .6s ease; } .lr-turnout > svg { color: var(--brand); }
+.lr-turnout b { display: block; font: 900 28px/1 var(--font-display); color: var(--ink); } .lr-turnout small { font-size: 12px; color: var(--subtle); }
+@keyframes lr-pop { 0% { transform: scale(1); } 35% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.lr-ring { --p: 0%; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--brand) var(--p), var(--soft) 0); transition: background .6s; }
+.lr-ring i { width: 42px; height: 42px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font: 700 12px var(--font-body); font-style: normal; }
+.lr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+.lr-position { padding: 18px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); display: grid; gap: 14px; align-content: start; }
+.lr-position h3 { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font: 900 18px var(--font-display); } .lr-position h3 small { font: 500 12.5px var(--font-body); color: var(--subtle); }
+.lr-row { display: flex; align-items: center; gap: 12px; }
+.lr-avatar { position: relative; width: 46px; height: 46px; flex: none; border-radius: 50%; background: linear-gradient(145deg, #04281a, #087a45); display: grid; place-items: center; color: #9be8c0; font: 900 15px var(--font-display); }
+.lr-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%; }
+.lr-avatar em { position: absolute; right: -4px; top: -4px; width: 20px; height: 20px; border-radius: 50%; background: #f5b301; color: #fff; display: grid; place-items: center; font-style: normal; box-shadow: 0 0 0 2px var(--surface); }
+.lr-main { flex: 1; min-width: 0; } .lr-line { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; font-size: 14.5px; }
+.lr-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .lr-name small { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #fff3cc; color: #7a5a00; font-size: 11px; font-weight: 700; }
+.lr-line b { flex: none; font-variant-numeric: tabular-nums; } .lr-line b small { font-weight: 500; color: var(--subtle); }
+.lr-bar { height: 10px; border-radius: 999px; background: var(--soft); overflow: hidden; } .lr-bar i { display: block; height: 100%; min-width: 0; border-radius: 999px; background: linear-gradient(90deg, #8bd5ab, #2ea36a); transition: width .9s cubic-bezier(.2, .8, .2, 1); }
+.lr-row.is-leading .lr-bar i { background: linear-gradient(90deg, #1fbf75, #006b40); }
+.toggle-line { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; } .toggle-line input { width: 18px; height: 18px; accent-color: var(--brand); }

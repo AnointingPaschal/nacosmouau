@@ -27,7 +27,7 @@ function levelList(input: unknown): string | null | undefined {
 const canContest = (levels: string | null, level: string | null) => !levels || (level !== null && levels.split(',').includes(level));
 
 async function detail(env: Env, id: string) {
-  const election = await env.DB.prepare('SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor FROM elections WHERE id=?').bind(id).first();
+  const election = await env.DB.prepare('SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor,live_results FROM elections WHERE id=?').bind(id).first();
   if (!election) return fail('Election not found.', 404);
   const [positions, candidates] = await Promise.all([
     env.DB.prepare('SELECT id,title,display_order,eligible_levels FROM election_positions WHERE election_id=? ORDER BY display_order,title').bind(id).all(),
@@ -59,6 +59,7 @@ async function update(request: Request, env: Env, user: Staff, id: string) {
   if ('description' in body) put('description', text(body.description, 2000) || null);
   if ('opens_at' in body) put('opens_at', text(body.opens_at, 40));
   if ('closes_at' in body) put('closes_at', text(body.closes_at, 40));
+  if ('live_results' in body) put('live_results', body.live_results === true ? 1 : 0);
   if ('form_fee_minor' in body) { const fee = toMinor(body.form_fee_minor); if (fee === null) return fail('Enter a valid form fee.'); put('form_fee_minor', fee); }
   if ('status' in body) {
     const status = text(body.status, 20); if (!STATUSES.includes(status)) return fail('Choose a valid election status.');

@@ -8,6 +8,7 @@ import { fromKobo, naira, toKobo, when } from '../../lib/money';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { FileUpload } from '../../components/FileUpload';
 import { PageTitle, Panel, Pill, Stat } from '../../components/Workspace';
+import { LiveResults } from '../../components/LiveResults';
 
 interface Row { id: string; title: string; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; positions: number; candidates: number; eligible: number; votes: number }
 const toLocal = (iso?: string | null) => (iso ? iso.slice(0, 16) : '');
@@ -67,13 +68,12 @@ function EditContestant({ electionId, cand, positions, locked, onClose, onDone }
 }
 
 interface Cand { id: string; position_id: string; display_name: string; manifesto: string; photo_url: string | null; status: string; screening_note: string | null; matric_number: string | null; academic_level: string | null; payment_status: string | null }
-interface Detail { election: { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number }; positions: Array<{ id: string; title: string; eligible_levels: string | null }>; candidates: Cand[] }
+interface Detail { election: { id: string; title: string; description: string | null; status: string; opens_at: string | null; closes_at: string | null; form_fee_minor: number; live_results: number }; positions: Array<{ id: string; title: string; eligible_levels: string | null }>; candidates: Cand[] }
 const NEXT: Record<string, { to: string; label: string }> = { draft: { to: 'nominations', label: 'Open nominations' }, nominations: { to: 'voting', label: 'Open voting' }, voting: { to: 'closed', label: 'Close election' } };
 
 function ElectionDetail({ id }: { id: string }) {
   const client = useQueryClient();
   const q = useQuery({ queryKey: ['staff', 'elections', id], queryFn: ({ signal }) => api.get<Detail>(`staff/elections/${id}`, signal), retry: false });
-  const results = useQuery({ queryKey: ['staff', 'elections', id, 'results'], queryFn: ({ signal }) => api.get<{ turnout: number; positions: Array<{ id: string; title: string; candidates: Array<{ id: string; display_name: string; votes: number }> }> }>(`staff/elections/${id}/results`, signal), retry: false, enabled: q.data?.election.status === 'voting' || q.data?.election.status === 'closed' });
   const navigate = useNavigate(); const [pos, setPos] = useState(''); const [posLevels, setPosLevels] = useState<string[]>([...LEVELS]); const [editPos, setEditPos] = useState<Detail['positions'][number] | null>(null); const [editCand, setEditCand] = useState<Cand | null>(null); const [c, setC] = useState({ position_id: '', matric_number: '', manifesto: '', photo: '' }); const [busy, setBusy] = useState(false);
   const refresh = () => client.invalidateQueries({ queryKey: ['staff', 'elections'] });
   if (q.isLoading) return <LoadingState/>;
@@ -95,6 +95,7 @@ function ElectionDetail({ id }: { id: string }) {
         <label className="inline-field"><span>Closes</span><input type="datetime-local" defaultValue={toLocal(election.closes_at)} disabled={election.status === 'closed'} onBlur={e => { if (e.target.value && toIso(e.target.value) !== election.closes_at) void run(() => api.patch(`staff/elections/${id}`, { closes_at: toIso(e.target.value) }), 'Closing time saved'); }}/></label>
         <label className="inline-field"><span>Form fee (₦)</span><input type="number" min="0" defaultValue={fromKobo(election.form_fee_minor)} disabled={locked} onBlur={e => { if (toKobo(e.target.value || 0) !== election.form_fee_minor) void run(() => api.patch(`staff/elections/${id}`, { form_fee_minor: toKobo(e.target.value || 0) }), 'Form fee saved'); }}/></label>
       </div>
+      <label className="toggle-line"><input type="checkbox" checked={election.live_results === 1} onChange={e => void run(() => api.patch(`staff/elections/${id}`, { live_results: e.target.checked }), e.target.checked ? 'Members can now watch results live' : 'Results stay hidden from members until the election closes')}/> Let members watch results update live while voting is open</label>
       <p className="form-note">Voting is only open between the opening and closing times, and only members who have paid this session's NACOS dues can vote.</p>
     </Panel>
     <div className="pay-layout">
@@ -129,9 +130,6 @@ function ElectionDetail({ id }: { id: string }) {
     </Panel>
     {editPos && <EditPosition electionId={id} position={editPos} onClose={() => setEditPos(null)} onDone={() => void refresh()}/>}
     {editCand && <EditContestant electionId={id} cand={editCand} positions={positions} locked={locked} onClose={() => setEditCand(null)} onDone={() => void refresh()}/>}
-    {results.data && <Panel title={election.status === 'closed' ? 'Final results' : 'Live tally (admins only)'}>
-      <p className="form-note">Turnout: {results.data.turnout} voters.</p>
-      {results.data.positions.map(p => { const max = Math.max(1, ...p.candidates.map(x => x.votes)); return <div key={p.id} className="position-block"><h3>{p.title}</h3>{p.candidates.map(x => <div className="result-row" key={x.id}><div className="result-name"><span>{x.display_name}</span><b>{x.votes}</b></div><div className="result-bar"><i style={{ width: `${(x.votes / max) * 100}%` }}/></div></div>)}</div>; })}
-    </Panel>}
+    {(election.status === 'voting' || election.status === 'closed') && <LiveResults path={`staff/elections/${id}/results`} queryKey={['staff', 'elections', id, 'results']} live={election.status === 'voting'} closed={election.status === 'closed'} title={election.status === 'closed' ? 'Final results' : 'Live results (admin view)'}/>}
   </>;
 }
