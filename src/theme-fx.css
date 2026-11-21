@@ -297,8 +297,7 @@ html[data-scrolled] .site-header { box-shadow: 0 14px 40px -18px #07210f55; }
 :root[data-theme=dark] .exec-portrait { background-color: #12281d; }
 .president-portrait img { background: #0b120e; }
 .executive-photo { display: grid; place-items: center; }
-.event-card > img, .publication-card > img, .achievement-card img, .slide-manager-card > img { object-fit: contain; background: var(--soft); }
-.event-detail-image, .article-hero { object-fit: contain; height: auto; max-height: 520px; background: var(--soft); }
-.lightbox img, .photo-tile img, .album-cover img { object-fit: contain; }
-.photo-tile, .album-cover { background: var(--soft); }
+.event-card > img, .publication-card > img, .achievement-card img, .slide-manager-card > img, .photo-tile img, .album-cover img, .event-detail-image, .article-hero { object-fit: cover; object-position: center; width: 100%; background: var(--soft); }
+.event-detail-image, .article-hero { height: min(56vw, 460px); }
+.lightbox img { object-fit: contain; }
 .rp-face img, .cand-thumb img, .ev-speaker img { object-position: center top; }
