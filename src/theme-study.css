@@ -300,3 +300,9 @@
   .lm-call { padding: 4px 7px; font-size: 11px; border-radius: 7px; gap: 4px; }
   .workspace-panel:has(.lm-list) { padding: 10px; border-radius: 16px; }
 }
+
+/* Sidebar: class links are gold-accented so they read differently from NACOS links */
+.workspace-sidebar .is-class .workspace-label { color: #f0c76a; }
+.workspace-sidebar .is-class a .nav-icon { color: #f0c76a; }
+.workspace-sidebar .is-class a.active { background: linear-gradient(90deg, #f0c76a38, transparent); box-shadow: inset 3px 0 0 #f0c76a; color: #ffe3a1; }
+.workspace-sidebar .is-class a.active .nav-icon { background: linear-gradient(135deg, #e0a93a, #f0c76a); color: #2b1d00; }
