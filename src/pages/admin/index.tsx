@@ -5,6 +5,7 @@ import { AdminMembers } from './AdminMembers';
 import { AdminPayments } from './AdminPayments';
 import { AdminAnalytics, AdminAudit, AdminFinance, AdminRoles, AdminWelfare } from './AdminReports';
 import { AdminSettings } from './AdminSettings';
+import { AdminVisitors } from './AdminVisitors';
 import { AdminPaymentSettings } from './AdminPaymentSettings';
 import { AdminCourses } from './AdminCourses';
 import { AdminClassReps } from './AdminClassReps';
@@ -24,6 +25,7 @@ export function AdminRouter() {
     case 'elections': return <AdminElections/>;
     case 'finance': return <AdminFinance/>;
     case 'analytics': return <AdminAnalytics/>;
+    case 'visitors': return <AdminVisitors/>;
     case 'audit': return <AdminAudit/>;
     case 'welfare': return <AdminWelfare/>;
     case 'roles': return <AdminRoles/>;

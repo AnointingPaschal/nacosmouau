@@ -1,6 +1,6 @@
 import { useSession } from '../hooks/useSession';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, ChevronDown, CreditCard, FileText, FolderOpen, GraduationCap, HandHeart, IdCard, Images, KeyRound, Landmark, LayoutDashboard, LayoutPanelTop, ListTree, LogOut, Mail, Menu, Moon, Newspaper, ScrollText, Settings, Sun, Ticket, TrendingUp, UserRound, Users, UsersRound, Vote, Wallet, X, CalendarDays, BookOpen, Calculator, BadgeCheck, Crown, ClipboardCheck, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, BarChart3, ChevronDown, CreditCard, FileText, FolderOpen, GraduationCap, HandHeart, IdCard, Images, KeyRound, Landmark, LayoutDashboard, LayoutPanelTop, ListTree, LogOut, Mail, Menu, Moon, Newspaper, ScrollText, Settings, Sun, Ticket, TrendingUp, UserRound, Users, UsersRound, Vote, Wallet, X, CalendarDays, BookOpen, Calculator, BadgeCheck, Crown, ClipboardCheck, Radio, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ const adminGroups: NavGroup[] = [
   { title: 'Overview', items: [['Dashboard', '/admin', LayoutDashboard]] },
   { title: 'Members and money', items: [['Members', '/admin/members', Users], ['Payments', '/admin/payments', Wallet], ['Dues & payment details', '/admin/payment-settings', Landmark], ['Finance', '/admin/finance', TrendingUp], ['Elections', '/admin/elections', Vote]] },
   { title: 'Website content', items: [['Events', '/admin/events', CalendarDays], ['Executives', '/admin/executives', UsersRound], ['CMS & hero slides', '/admin/cms/hero-slides', Images], ['Pages', '/admin/pages', FileText], ['Page sections', '/admin/sections', LayoutPanelTop], ['Navigation menus', '/admin/navigation', ListTree], ['News & notices', '/admin/news', Newspaper], ['Documents', '/admin/documents', FolderOpen], ['Contact messages', '/admin/messages', Mail]] },
-  { title: 'Association', items: [['Academics', '/admin/academics', GraduationCap], ['Course catalogue', '/admin/courses', BookOpen], ['Course rep elections', '/admin/class-reps', Crown], ['Lecture attendance', '/admin/attendance', ClipboardCheck], ['Welfare', '/admin/welfare', HandHeart], ['Roles & permissions', '/admin/roles', KeyRound], ['Analytics', '/admin/analytics', BarChart3], ['Audit log', '/admin/audit', ScrollText], ['Settings', '/admin/settings', Settings]] },
+  { title: 'Association', items: [['Academics', '/admin/academics', GraduationCap], ['Course catalogue', '/admin/courses', BookOpen], ['Course rep elections', '/admin/class-reps', Crown], ['Lecture attendance', '/admin/attendance', ClipboardCheck], ['Welfare', '/admin/welfare', HandHeart], ['Roles & permissions', '/admin/roles', KeyRound], ['Live visitors', '/admin/visitors', Radio], ['Analytics', '/admin/analytics', BarChart3], ['Audit log', '/admin/audit', ScrollText], ['Settings', '/admin/settings', Settings]] },
 ];
 const portalGroups: NavGroup[] = [
   { title: 'My space', items: [['Overview', '/portal', LayoutDashboard], ['My membership', '/portal/profile', UserRound], ['Digital ID', '/portal/id-card', IdCard]] },
