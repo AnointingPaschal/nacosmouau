@@ -7,12 +7,14 @@ import { AdminAnalytics, AdminAudit, AdminFinance, AdminRoles, AdminWelfare } fr
 import { AdminSettings } from './AdminSettings';
 import { AdminPaymentSettings } from './AdminPaymentSettings';
 import { AdminCourses } from './AdminCourses';
+import { AdminClassReps } from './AdminClassReps';
 
 export { AdminOverview } from './AdminReports';
 
 export function AdminRouter() {
   const { module = '' } = useParams();
   switch (module) {
+    case 'class-reps': return <AdminClassReps/>;
     case 'courses': return <AdminCourses/>;
     case 'members': return <AdminMembers/>;
     case 'payments': return <AdminPayments/>;

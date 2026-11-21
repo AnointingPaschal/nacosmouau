@@ -23,3 +23,4 @@
 - After every change that touches project code, commit and push to `main`.
 - Always apply new D1 migrations to the remote `nacos-mouau` database (`wrangler d1 migrations apply nacos-mouau --remote`, credentials from `.env`). List pending migrations first and report what was applied.
 - Course catalogue: seeded by `migrations/0014_academic_records.sql`; managed in Admin → Course catalogue.
+- Course reps: elected per level and session (tables in `0015_class_representatives.sql`). Admins only approve contestants and start voting; voting ends at its set time and winners get the Course Rep / Assistant badge automatically. Never add a manual "assign rep" path.
