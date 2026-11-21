@@ -5,6 +5,7 @@ type Me = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 const LEVELS = ['100', '200', '300', '400'];
 const SESSION = /^(\d{4})\/(\d{4})$/;
 const GRADES = ['A', 'B', 'C', 'D', 'E', 'F'];
+const MAX_UNITS = 24;
 
 /** Nigerian 5-point scale used at MOUAU: A 70-100, B 60-69, C 50-59, D 45-49, E 40-44, F 0-39. */
 const gradeFor = (score: number) => (score >= 70 ? 'A' : score >= 60 ? 'B' : score >= 50 ? 'C' : score >= 45 ? 'D' : score >= 40 ? 'E' : 'F');
@@ -27,6 +28,9 @@ async function register(request: Request, env: Env, user: Me) {
   const session = text(body.session, 9) || await currentSession(env);
   if (!validSession(session)) return fail('Enter the session like 2025/2026.');
   const added: string[] = []; const skipped: string[] = [];
+  const picked = await env.DB.prepare(`SELECT COALESCE(SUM(units),0) n FROM course_catalogue WHERE is_active=1 AND (owner_user_id IS NULL OR owner_user_id=?) AND id IN (${ids.map(() => '?').join(',')}) AND id NOT IN (SELECT course_id FROM member_courses WHERE user_id=? AND session=?)`).bind(user.id, ...ids, user.id, session).first<{ n: number }>();
+  const held = await env.DB.prepare('SELECT COALESCE(SUM(c.units),0) n FROM member_courses m JOIN course_catalogue c ON c.id=m.course_id WHERE m.user_id=? AND m.session=?').bind(user.id, session).first<{ n: number }>();
+  if ((held?.n ?? 0) + (picked?.n ?? 0) > MAX_UNITS) return fail(`Total credit units for ${session} cannot be more than ${MAX_UNITS}. You have ${held?.n ?? 0} registered and are adding ${picked?.n ?? 0}.`, 409);
   for (const courseId of ids) {
     const course = await env.DB.prepare('SELECT id,level,semester FROM course_catalogue WHERE id=? AND is_active=1 AND (owner_user_id IS NULL OR owner_user_id=?)').bind(courseId, user.id).first<{ id: string; level: string; semester: number }>();
     if (!course) { skipped.push(courseId); continue; }

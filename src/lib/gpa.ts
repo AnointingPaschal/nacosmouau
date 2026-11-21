@@ -1,5 +1,7 @@
 // Academic record maths on the Nigerian 5-point scale used at MOUAU.
 export type Grade = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+/** Most credit units a member can register in one session (both semesters together). */
+export const MAX_UNITS = 24;
 export const GRADES: Grade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
 export const GRADE_POINTS: Record<Grade, number> = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
 export const GRADE_RANGES: Record<Grade, string> = { A: '70 - 100', B: '60 - 69', C: '50 - 59', D: '45 - 49', E: '40 - 44', F: '0 - 39' };

@@ -180,3 +180,41 @@
   .res-score, .res-grade { min-height: 34px; width: 64px; font-size: 13px; border-radius: 8px; }
   .res-term-foot { padding: 8px 12px; font-size: 12px; gap: 4px 14px; } .res-term-foot b { font-size: 14px; }
 }
+
+/* Both semesters on one list, grade-only results, compact cards */
+.study-sem { margin-bottom: 16px; }
+.study-sem header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
+.study-sem h3 { margin: 0; font: 800 16px var(--font-display); }
+.study-sem header > span { font-size: 12px; color: var(--subtle); }
+.study-sem .study-all { margin: 0 0 0 auto; }
+.study-courses li.is-blocked { opacity: .45; }
+.study-courses li.is-blocked label { cursor: not-allowed; }
+.study-reg { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 1px 7px; border-radius: 99px; background: var(--brand); color: #fff !important; font: 700 10px var(--font-body); font-style: normal; letter-spacing: .04em; text-transform: none; vertical-align: 1px; }
+.study-done { display: none; }
+.study-meter small { font-size: 16px; opacity: .6; margin-left: 2px; }
+.study-mine-head { margin: 12px 0 2px; font: 800 12px var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--brand); }
+.study-dock-info { flex: 1; min-width: 0; }
+.study-cap { height: 6px; margin-top: 7px; border-radius: 99px; background: #ffffff26; overflow: hidden; }
+.study-cap i { display: block; height: 100%; border-radius: inherit; background: var(--brand-bright); transition: width .4s var(--ease); }
+.study-cap.over i { background: #ff6b5e; }
+.res-table .name { min-width: 0; }
+.res-table .name b { display: block; font-size: 13px; color: var(--ink); }
+.res-table .name span { display: block; font-size: 12px; color: var(--muted); line-height: 1.3; }
+.res-grade { width: 92px; padding-right: 22px; }
+.res-hero { padding: 18px 20px; gap: 14px; border-radius: 20px; }
+.res-ring { width: 118px; height: 118px; }
+.res-hero h2 { font-size: 22px; }
+.res-stats { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.res-stats div { padding: 10px 12px; border-radius: 12px; } .res-stats dd { font-size: 20px; } .res-stats dt { font-size: 10px; }
+@media (max-width: 900px) { .res-stats { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 560px) {
+  .res-hero { padding: 12px; gap: 8px; border-radius: 14px; }
+  .res-ring { width: 84px; height: 84px; } .res-hero h2 { font-size: 16px; } .res-class { font-size: 10px; }
+  .res-stats { gap: 5px; } .res-stats div { padding: 6px 7px; border-radius: 10px; } .res-stats dt { font-size: 8.5px; letter-spacing: .04em; } .res-stats dd { font-size: 15px; margin-top: 2px; }
+  .res-grade { width: 86px; min-height: 32px; }
+  .study-sem header { flex-wrap: wrap; gap: 4px 8px; } .study-sem h3 { font-size: 14px; }
+  .study-reg { margin-left: 6px; font-size: 9px; padding: 0 6px; }
+  .workspace-panel .panel-heading + .res-trend { margin-top: 4px; }
+}
+/* Sticky top bars must not show content through them */
+.workspace-topbar { background: var(--page); backdrop-filter: none; -webkit-backdrop-filter: none; }
