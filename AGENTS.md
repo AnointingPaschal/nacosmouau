@@ -18,3 +18,8 @@
 - Protect ballots by separating voter participation from encrypted/opaque ballot selections.
 
 - Media storage: public images are committed to GitHub (`media/uploads/...`) via `functions/api/_storage.ts` and served by `/api/files/*`; private files (profile photos, documents) stay in R2. Needs the `GITHUB_TOKEN` Pages secret.
+
+## Standing instructions from the owner
+- After every change that touches project code, commit and push to `main`.
+- Always apply new D1 migrations to the remote `nacos-mouau` database (`wrangler d1 migrations apply nacos-mouau --remote`, credentials from `.env`). List pending migrations first and report what was applied.
+- Course catalogue: seeded by `migrations/0014_academic_records.sql`; managed in Admin → Course catalogue.

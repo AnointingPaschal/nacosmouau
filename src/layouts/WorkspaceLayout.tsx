@@ -12,7 +12,7 @@ const adminGroups: NavGroup[] = [
   { title: 'Overview', items: [['Dashboard', '/admin', LayoutDashboard]] },
   { title: 'Members and money', items: [['Members', '/admin/members', Users], ['Payments', '/admin/payments', Wallet], ['Dues & payment details', '/admin/payment-settings', Landmark], ['Finance', '/admin/finance', TrendingUp], ['Elections', '/admin/elections', Vote]] },
   { title: 'Website content', items: [['Events', '/admin/events', CalendarDays], ['Executives', '/admin/executives', UsersRound], ['CMS & hero slides', '/admin/cms/hero-slides', Images], ['Pages', '/admin/pages', FileText], ['Page sections', '/admin/sections', LayoutPanelTop], ['Navigation menus', '/admin/navigation', ListTree], ['News & notices', '/admin/news', Newspaper], ['Documents', '/admin/documents', FolderOpen], ['Contact messages', '/admin/messages', Mail]] },
-  { title: 'Association', items: [['Academics', '/admin/academics', GraduationCap], ['Welfare', '/admin/welfare', HandHeart], ['Roles & permissions', '/admin/roles', KeyRound], ['Analytics', '/admin/analytics', BarChart3], ['Audit log', '/admin/audit', ScrollText], ['Settings', '/admin/settings', Settings]] },
+  { title: 'Association', items: [['Academics', '/admin/academics', GraduationCap], ['Course catalogue', '/admin/courses', BookOpen], ['Welfare', '/admin/welfare', HandHeart], ['Roles & permissions', '/admin/roles', KeyRound], ['Analytics', '/admin/analytics', BarChart3], ['Audit log', '/admin/audit', ScrollText], ['Settings', '/admin/settings', Settings]] },
 ];
 const portalGroups: NavGroup[] = [
   { title: 'My space', items: [['Overview', '/portal', LayoutDashboard], ['My membership', '/portal/profile', UserRound], ['Digital ID', '/portal/id-card', IdCard]] },

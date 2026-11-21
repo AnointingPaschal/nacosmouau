@@ -127,3 +127,12 @@
 :root[data-theme=dark] .res-grade.g-D, :root[data-theme=dark] .res-grade.g-E { background: #2b2410; color: #ffd37a; border-color: #4a3e17; }
 :root[data-theme=dark] .res-grade.g-F { background: #2e1512; color: #ff9d94; border-color: #5a2520; }
 :root[data-theme=dark] .study-tabs button.active, :root[data-theme=dark] .study-meter, :root[data-theme=dark] .study-dock, :root[data-theme=dark] .res-term-gpa { background: #1a2a21; color: #f5f5f5; }
+
+/* Admin course catalogue */
+.adm-course-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.adm-course-filters .study-search { margin-left: auto; }
+.adm-course-table tr.is-hidden td { opacity: .5; }
+.adm-hidden-tag { margin-left: 8px; padding: 2px 8px; border-radius: 99px; background: var(--soft); color: var(--subtle); font: 700 10px var(--font-body); font-style: normal; letter-spacing: .1em; text-transform: uppercase; }
+.adm-empty { text-align: center; color: var(--subtle); padding: 28px !important; }
+.adm-course-table .record-actions { justify-content: flex-end; }
+@media (max-width: 560px) { .adm-course-filters .study-search { margin-left: 0; width: 100%; } }
