@@ -16,6 +16,7 @@ export interface SiteSettings {
   institution_name: string;
   academic_session: string;
   logo_url: string | null;
+  secondary_logo_url?: string | null;
   constitution_url: string | null;
   contact_email: string | null;
   contact_phone: string | null;

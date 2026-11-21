@@ -222,3 +222,16 @@ html[data-scrolled] .site-header { box-shadow: 0 14px 40px -18px #07210f55; }
   .hx::before, .hx-bg::after, .hx-overlay::before, .hx-inner::before, .hx-inner::after, .hx-dots button.active::after, .hx-copy h1 span, .hx-copy h1::after, .utility-bar, .join-banner:before, .auth-page:before, .president-portrait, .president-band:after, .hx-title-alt { animation: none !important; }
   .fx-progress { display: none; }
 }
+
+/* Brand: two logos side by side, no wordmark */
+.brand { gap: 12px; }
+.brand-symbol { width: 48px; height: 48px; }
+.brand-symbol + .brand-symbol { position: relative; margin-left: 6px; }
+.brand-symbol + .brand-symbol::before { content: ''; position: absolute; left: -10px; top: 14%; bottom: 14%; width: 1px; background: var(--line); }
+.brand-light .brand-symbol + .brand-symbol::before { background: #ffffff33; }
+.utility-bar { height: auto; min-height: 34px; padding-block: 7px; }
+@media (max-width: 560px) {
+  .brand-symbol { width: 42px; height: 42px; }
+  .utility-bar { min-height: 30px; padding-block: 6px; font-size: 9px; letter-spacing: .06em; justify-content: center; text-align: center; line-height: 1.4; }
+  .utility-bar span:first-child { max-width: 100%; white-space: normal; overflow: visible; text-overflow: clip; }
+}
