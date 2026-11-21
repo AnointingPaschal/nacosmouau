@@ -79,8 +79,8 @@ async function roles(env: Env, user: Staff) {
 async function paymentList(request: Request, env: Env, user: Staff) {
   if (!(await allow(env, user, 'payments', 'read'))) return denied();
   const q = new URL(request.url).searchParams; const status = text(q.get('status'), 20); const purpose = text(q.get('purpose'), 30); const search = text(q.get('search'), 80);
-  const rows = await env.DB.prepare(`SELECT p.id,p.reference,p.amount_minor,p.status,p.purpose,p.session,p.method,p.proof_key,p.depositor_name,p.review_note,p.created_at,p.paid_at,u.full_name,u.matric_number,u.academic_level
-    FROM payments p LEFT JOIN users u ON u.id=p.user_id WHERE (?='' OR p.status=?) AND (?='' OR p.purpose=?) AND (?='' OR u.full_name LIKE '%'||?||'%' OR u.matric_number LIKE '%'||?||'%' OR p.reference LIKE '%'||?||'%') ORDER BY (p.status='pending') DESC,p.created_at DESC LIMIT 200`).bind(status, status, purpose, purpose, search, search, search, search).all<Record<string, unknown>>();
+  const rows = await env.DB.prepare(`SELECT p.id,p.reference,p.amount_minor,p.status,p.purpose,p.session,p.method,p.proof_key,p.depositor_name,p.review_note,p.created_at,p.paid_at,u.full_name,u.matric_number,u.academic_level,d.title AS due_title
+    FROM payments p LEFT JOIN users u ON u.id=p.user_id LEFT JOIN dues_items d ON d.id=p.ref_id AND p.purpose='custom_due' WHERE (?='' OR p.status=?) AND (?='' OR p.purpose=?) AND (?='' OR u.full_name LIKE '%'||?||'%' OR u.matric_number LIKE '%'||?||'%' OR p.reference LIKE '%'||?||'%') ORDER BY (p.status='pending') DESC,p.created_at DESC LIMIT 200`).bind(status, status, purpose, purpose, search, search, search, search).all<Record<string, unknown>>();
   return json((rows.results ?? []).map(r => ({ ...r, proof_url: r.proof_key ? `/api/files/${r.proof_key}` : null, proof_key: undefined })));
 }
 

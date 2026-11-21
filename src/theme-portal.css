@@ -360,3 +360,20 @@
 .audit-details { display: flex; flex-wrap: wrap; gap: 6px; } .audit-details span { max-width: 100%; padding: 4px 10px; border-radius: 10px; background: var(--soft); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; word-break: break-word; } .audit-details b { color: var(--ink); text-transform: capitalize; margin-right: 4px; }
 .audit-details button { border: 0; background: transparent; color: var(--brand); font: 600 12px var(--font-body); cursor: pointer; text-decoration: underline; padding: 4px 2px; }
 .workspace-main, .workspace-panel { min-width: 0; } .workspace-panel { overflow-wrap: anywhere; }
+
+/* dues cards */
+.section-line { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 6px 0 12px; } .section-line h2 { margin: 0; font: 900 19px var(--font-display); } .section-line span { font-size: 13px; color: var(--subtle); }
+.due-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; margin-bottom: 22px; align-items: start; }
+.due-card { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); border-top: 4px solid var(--line); }
+.due-card.is-paid { border-top-color: #1fbf75; } .due-card.is-pending { border-top-color: #f5b301; } .due-card.is-rejected { border-top-color: #d92d20; } .due-card.is-unpaid { border-top-color: var(--brand); }
+.due-card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; } .due-kind { font-size: 10.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--brand); }
+.due-state { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--soft); color: var(--muted); } .due-state.is-paid { background: #e3f5ea; color: #067a3f; } .due-state.is-pending { background: #fff4d6; color: #8a5a00; } .due-state.is-rejected { background: #fde8e6; color: #b42318; }
+.due-card h3 { margin: 0; font: 900 17px/1.25 var(--font-display); } .due-card > p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.due-amount { font: 900 26px/1.1 var(--font-display); color: var(--brand-deep); letter-spacing: -.02em; } .due-date { display: inline-flex; align-items: center; gap: 5px; color: var(--subtle); font-size: 12.5px; } .due-date.is-late { color: #b42318; font-weight: 600; }
+.due-card .form-note { margin: 0; } .due-card .notice-bar { margin: 0; }
+.payments-made .filter-tabs { margin-bottom: 10px; }
+.level-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.dues-admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.dues-stat { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); } .dues-stat b { color: var(--ink); }
+.dues-item-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; } .dues-item-head h3 { margin: 0; font: 900 17px/1.25 var(--font-display); }
+.nacos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; } .nacos-cell { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); display: grid; gap: 8px; } .nacos-cell > b { font: 900 15px var(--font-display); }

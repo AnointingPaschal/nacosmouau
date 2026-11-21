@@ -6,7 +6,8 @@ import { api } from '../../lib/api';
 import { naira } from '../../lib/money';
 import { FileUpload } from '../../components/FileUpload';
 
-export interface PayInfo { session: string; dues_amount_minor: number; paystack: boolean; bank: { bank_name: string; account_name: string; account_number: string; configured: boolean }; dues: { status: 'paid' | 'pending' | 'unpaid' | 'rejected'; payment: Record<string, unknown> | null }; payments: Array<Record<string, unknown>> }
+export interface DueRow { id: string; kind: 'nacos' | 'custom'; title: string; description: string | null; amount_minor: number; due_date: string | null; status: 'paid' | 'pending' | 'unpaid' | 'rejected'; payment: { id: string; method: string; review_note: string | null } | null }
+export interface PayInfo { session: string; level: string | null; dues_items: DueRow[]; dues_amount_minor: number; paystack: boolean; bank: { bank_name: string; account_name: string; account_number: string; configured: boolean }; dues: { status: 'paid' | 'pending' | 'unpaid' | 'rejected'; payment: Record<string, unknown> | null }; payments: Array<Record<string, unknown>> }
 export const usePayInfo = () => useQuery({ queryKey: ['portal', 'payments'], queryFn: ({ signal }) => api.get<PayInfo>('portal/payments', signal), retry: false });
 
 function CopyButton({ value }: { value: string }) {
@@ -14,7 +15,7 @@ function CopyButton({ value }: { value: string }) {
 }
 
 /** Pay with Paystack or upload a bank teller. The amount is always decided by the server. */
-export function PayPanel({ purpose, refId, amountMinor, info, onDone }: { purpose: 'dues' | 'candidate_form'; refId?: string; amountMinor: number; info: PayInfo; onDone?: () => void }) {
+export function PayPanel({ purpose, refId, amountMinor, info, onDone }: { purpose: 'dues' | 'candidate_form' | 'custom_due'; refId?: string; amountMinor: number; info: PayInfo; onDone?: () => void }) {
   const client = useQueryClient();
   const [tab, setTab] = useState<'online' | 'transfer'>(info.paystack ? 'online' : 'transfer');
   const [proof, setProof] = useState(''); const [name, setName] = useState(''); const [busy, setBusy] = useState(false);

@@ -3,12 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound, Landmark, ShieldCheck, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/api';
-import { fromKobo, toKobo } from '../../lib/money';
 import { ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel } from '../../components/Workspace';
 import { PaystackSecretFields, SecurityPanel, type KeyStatus } from './PaystackKeyPanel';
 
-const LEVELS = ['100', '200', '300', '400'];
 interface Data {
   session: string; dues_by_level: Record<string, number>; dues_explicit: string[];
   bank_name: string; bank_account_name: string; bank_account_number: string;
@@ -18,7 +16,6 @@ interface Data {
 export function AdminPaymentSettings() {
   const client = useQueryClient();
   const q = useQuery({ queryKey: ['staff', 'payment-settings'], queryFn: ({ signal }) => api.get<Data>('staff/payment-settings', signal), retry: false });
-  const [dues, setDues] = useState<Record<string, string>>({});
   const [bank, setBank] = useState({ bank_name: '', bank_account_name: '', bank_account_number: '' });
   const [key, setKey] = useState('');
   const [secret, setSecret] = useState(''); const [code, setCode] = useState('');
@@ -27,7 +24,6 @@ export function AdminPaymentSettings() {
 
   useEffect(() => {
     const d = q.data; if (!d) return;
-    setDues(Object.fromEntries(LEVELS.map(l => [l, fromKobo(d.dues_by_level[l] ?? 0)])));
     setBank({ bank_name: d.bank_name, bank_account_name: d.bank_account_name, bank_account_number: d.bank_account_number });
     setKey(d.paystack_public_key);
   }, [q.data]);
@@ -41,7 +37,7 @@ export function AdminPaymentSettings() {
     try {
       if (secret) await api.put('staff/paystack-key', { secret_key: secret, password, code });
       await api.put('staff/payment-settings', {
-        dues_by_level: Object.fromEntries(LEVELS.map(l => [l, toKobo(dues[l] || 0)])), ...bank, paystack_public_key: key,
+        ...bank, paystack_public_key: key,
         super_admin_email: d.caller_is_super_admin ? undefined : email, super_admin_password: password,
       });
       toast.success(secret ? 'Payment settings and secret key saved.' : 'Payment settings saved.'); setPassword(''); setSecret(''); setCode('');
@@ -50,14 +46,8 @@ export function AdminPaymentSettings() {
   };
 
   return <>
-    <PageTitle eyebrow="FINANCE" title="Dues and payment details" description={`NACOS dues for the ${d.session} session, bank account and Paystack. Only a super administrator's password can change them.`}/>
+    <PageTitle eyebrow="FINANCE" title="Payment details" description="The bank account members pay tellers into, and your Paystack keys. Dues amounts are set on the Dues page. Only a super administrator's password can change these."/>
     <form className="form-stack" onSubmit={save}>
-      <Panel title={`Dues for ${d.session} (₦)`}>
-        <div className="crud-form-grid">
-          {LEVELS.map(l => <label className="field" key={l}><span>{l} level</span><input inputMode="decimal" value={dues[l] ?? ''} onChange={e => setDues(v => ({ ...v, [l]: e.target.value }))} placeholder="0"/></label>)}
-        </div>
-        <p className="field-hint">A level set to 0 shows "Dues not set" to those members, so they cannot pay or vote until you set it. Change the session itself in Settings.</p>
-      </Panel>
       <Panel title="Bank account for teller payments">
         <div className="crud-form-grid">
           <label className="field"><span>Bank name</span><input value={bank.bank_name} onChange={e => setBank(b => ({ ...b, bank_name: e.target.value }))}/></label>

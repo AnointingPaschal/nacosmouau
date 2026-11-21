@@ -1,5 +1,6 @@
 import { Env, currentUser, passwordHash, verifyPassword } from '../auth/_shared';
 import { withStoredPaystackKey } from '../_secure';
+import { duesForMember, dueStatus, levelApplies, type DuesItem } from '../_dues';
 import { applyPaymentSuccess, audit, tally, bankDetails, currentSession, duesAmountForUser, duesPaid, ensureMembership, fail, fileKey, json, pathOf, paystackInitialize, paystackReady, paystackVerify, randomId, readBody, text } from '../_portal';
 
 type Me = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
@@ -76,15 +77,19 @@ async function updateCandidacy(request: Request, env: Env, user: Me, id: string)
 async function payments(env: Env, user: Me) {
   const session = await currentSession(env);
   const [rows, amount, bank, state] = await Promise.all([
-    env.DB.prepare('SELECT id,reference,amount_minor,currency,status,purpose,session,method,created_at,paid_at,review_note FROM payments WHERE user_id=? ORDER BY created_at DESC LIMIT 100').bind(user.id).all(),
+    env.DB.prepare('SELECT id,reference,amount_minor,currency,status,purpose,session,method,ref_id,created_at,paid_at,review_note FROM payments WHERE user_id=? ORDER BY created_at DESC LIMIT 100').bind(user.id).all(),
     duesAmountForUser(env, user.id), bankDetails(env), duesState(env, user.id, session),
   ]);
-  return json({ session, dues_amount_minor: amount, dues: state, bank, paystack: paystackReady(env), payments: rows.results ?? [] });
+  const level = (await env.DB.prepare('SELECT academic_level FROM users WHERE id=?').bind(user.id).first<{ academic_level: string | null }>())?.academic_level ?? null;
+  const items = await duesForMember(env, user.id, level);
+  const payments = ((rows.results ?? []) as Array<Record<string, unknown>>);
+  const titles = new Map((await env.DB.prepare('SELECT id,title FROM dues_items').all<{ id: string; title: string }>()).results?.map(r => [r.id, r.title]) ?? []);
+  return json({ session, level, dues_amount_minor: amount, dues: state, dues_items: items, bank, paystack: paystackReady(env), payments: payments.map(p => ({ ...p, due_title: p.purpose === 'custom_due' ? titles.get(String(p.ref_id ?? '')) ?? 'Other dues' : null })) });
 }
 
 async function createPayment(request: Request, env: Env, user: Me) {
   const body = await readBody(request); if (!body) return fail('Invalid request body.');
-  const purpose = body.purpose === 'candidate_form' ? 'candidate_form' : 'dues';
+  const purpose = body.purpose === 'candidate_form' ? 'candidate_form' : body.purpose === 'custom_due' ? 'custom_due' : 'dues';
   const method = body.method === 'transfer' ? 'transfer' : 'paystack';
   const session = await currentSession(env);
   let amount = 0; let refId: string | null = null;
@@ -94,6 +99,16 @@ async function createPayment(request: Request, env: Env, user: Me) {
     const existing = await duesState(env, user.id, session);
     if (existing.status === 'paid') return fail(`Your dues for ${session} are already paid.`, 409);
     if (existing.status === 'pending' && existing.payment?.method === 'transfer') return fail('Your bank transfer is awaiting approval.', 409);
+  } else if (purpose === 'custom_due') {
+    refId = text(body.refId, 80);
+    const item = await env.DB.prepare('SELECT id,title,description,amount_minor,levels,session,due_date,is_active FROM dues_items WHERE id=?').bind(refId).first<DuesItem>();
+    if (!item || !item.is_active || item.session !== session) return fail('These dues are not open for payment.', 404);
+    const level = (await env.DB.prepare('SELECT academic_level FROM users WHERE id=?').bind(user.id).first<{ academic_level: string | null }>())?.academic_level ?? null;
+    if (!levelApplies(item.levels, level)) return fail('These dues do not apply to your level.', 403);
+    const existing = await dueStatus(env, user.id, 'custom_due', item.id, session);
+    if (existing.status === 'paid') return fail('You have already paid these dues.', 409);
+    if (existing.status === 'pending' && existing.payment?.method === 'transfer') return fail('Your bank transfer is awaiting approval.', 409);
+    amount = item.amount_minor;
   } else {
     refId = text(body.refId, 80);
     const candidate = await env.DB.prepare('SELECT c.id,c.status,e.form_fee_minor,e.status AS election_status FROM election_candidates c JOIN elections e ON e.id=c.election_id WHERE c.id=? AND c.user_id=?').bind(refId, user.id).first<{ id: string; status: string; form_fee_minor: number; election_status: string }>();

@@ -7,8 +7,8 @@ import { naira, when } from '../../lib/money';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel, Pill } from '../../components/Workspace';
 
-interface P { id: string; reference: string; amount_minor: number; status: string; purpose: string | null; session: string | null; method: string | null; proof_url: string | null; depositor_name: string | null; review_note: string | null; created_at: string; full_name: string | null; matric_number: string | null; academic_level: string | null }
-const purposeLabel: Record<string, string> = { dues: 'NACOS dues', candidate_form: 'Candidate form' };
+interface P { id: string; reference: string; amount_minor: number; status: string; purpose: string | null; session: string | null; method: string | null; proof_url: string | null; depositor_name: string | null; due_title?: string | null; review_note: string | null; created_at: string; full_name: string | null; matric_number: string | null; academic_level: string | null }
+const purposeLabel: Record<string, string> = { dues: 'NACOS dues', candidate_form: 'Candidate form', custom_due: 'Other dues' };
 
 export function AdminPayments() {
   const client = useQueryClient();
@@ -23,12 +23,12 @@ export function AdminPayments() {
     <Panel>
       <div className="filter-bar">
         <div className="filter-tabs">{[['pending', 'Awaiting approval'], ['successful', 'Approved'], ['failed', 'Rejected'], ['', 'All']].map(([v, l]) => <button key={v} className={status === v ? 'selected' : ''} onClick={() => setStatus(v)}>{l}</button>)}</div>
-        <select value={purpose} onChange={e => setPurpose(e.target.value)} aria-label="Payment type"><option value="">All types</option><option value="dues">NACOS dues</option><option value="candidate_form">Candidate forms</option></select>
+        <select value={purpose} onChange={e => setPurpose(e.target.value)} aria-label="Payment type"><option value="">All types</option><option value="dues">NACOS dues</option><option value="custom_due">Other dues</option><option value="candidate_form">Candidate forms</option></select>
         <label className="crud-search"><Search size={16}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Name, matric or reference"/></label>
       </div>
       {q.isLoading ? <LoadingState/> : q.error ? <ErrorState error={q.error}/> : !q.data?.length ? <EmptyState title="No payments here" text="Payments matching these filters will appear here." icon={<Wallet size={22}/>}/> :
         <div className="record-list">{q.data.map(p => <article className="member-row" key={p.id}>
-          <div className="member-info"><strong>{p.full_name ?? 'Member'} · {naira(p.amount_minor)}</strong><span className="mono">{p.matric_number ?? '—'} · {p.academic_level ? `${p.academic_level}L` : ''}</span><span>{purposeLabel[p.purpose ?? ''] ?? 'Payment'}{p.session ? ` · ${p.session}` : ''} · {p.method === 'transfer' ? 'Bank teller' : 'Paystack'} · {when(p.created_at)}</span><span className="mono">{p.reference}{p.depositor_name ? ` · ${p.depositor_name}` : ''}</span>{p.review_note && <span className="note-bad">{p.review_note}</span>}</div>
+          <div className="member-info"><strong>{p.full_name ?? 'Member'} · {naira(p.amount_minor)}</strong><span className="mono">{p.matric_number ?? '—'} · {p.academic_level ? `${p.academic_level}L` : ''}</span><span>{p.due_title ?? purposeLabel[p.purpose ?? ''] ?? 'Payment'}{p.session ? ` · ${p.session}` : ''} · {p.method === 'transfer' ? 'Bank teller' : 'Paystack'} · {when(p.created_at)}</span><span className="mono">{p.reference}{p.depositor_name ? ` · ${p.depositor_name}` : ''}</span>{p.review_note && <span className="note-bad">{p.review_note}</span>}</div>
           <div className="member-actions"><Pill value={p.status}/>
             {p.proof_url && <a className="button button-outline btn-sm" href={p.proof_url} target="_blank" rel="noreferrer"><ExternalLink size={14}/> View teller</a>}
             {p.status === 'pending' && <><button className="button button-green btn-sm" onClick={() => void review(p, 'approve')}><Check size={14}/> Approve</button><button className="button button-outline btn-sm" onClick={() => setRejecting(p)}><X size={14}/> Reject</button></>}
