@@ -346,3 +346,5 @@
 .visit-timeline { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; } .visit-timeline li { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 13px; } .visit-timeline time { flex: none; width: 72px; color: var(--subtle); font-variant-numeric: tabular-nums; } .visit-timeline div { min-width: 0; display: grid; } .visit-timeline small { color: var(--muted); }
 .visit-previous { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; } .visit-previous li { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; } .visit-previous small { color: var(--subtle); }
 @media (max-width: 640px) { .visitor-row { align-items: flex-start; } .visitor-meta { display: none; } }
+.pager { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; color: var(--muted); }
+.filter-bar input[type=date], .filter-bar > input:not(.crud-search) { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); padding: 0 12px; font-size: 14px; max-width: 100%; }

@@ -39,11 +39,33 @@ async function detail(env: Env, id: string, canSeeContact: boolean) {
   return json({ session: rest, contact: canSeeContact ? { email, phone } : null, views: views.results ?? [], previous_visits: previous.results ?? [] });
 }
 
+
+async function history(env: Env, url: URL) {
+  const q = url.searchParams; const where: string[] = []; const args: unknown[] = [];
+  const type = q.get('type'); if (type === 'member') where.push('s.user_id IS NOT NULL'); else if (type === 'guest') where.push('s.user_id IS NULL');
+  const term = (q.get('q') ?? '').trim().slice(0, 80);
+  if (term) { const like = `%${term}%`; where.push('(u.full_name LIKE ? OR u.matric_number LIKE ? OR s.vid LIKE ? OR s.city LIKE ? OR s.country LIKE ?)'); args.push(like, like, like, like, like); }
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  const from = q.get('from') ?? ''; if (day.test(from)) { where.push('s.started_at >= ?'); args.push(from); }
+  const to = q.get('to') ?? ''; if (day.test(to)) { where.push("s.started_at < date(?, '+1 day')"); args.push(to); }
+  const path = (q.get('path') ?? '').trim().slice(0, 120); if (path) { where.push('EXISTS (SELECT 1 FROM page_views v WHERE v.session_id=s.id AND v.path LIKE ?)'); args.push(`%${path}%`); }
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const all = q.get('all') === '1'; const size = all ? 5000 : 25; const page = Math.max(1, Number(q.get('page')) || 1);
+  const [rows, total] = await Promise.all([
+    env.DB.prepare(`SELECT s.id,s.vid,s.user_id,s.started_at,s.last_seen_at,s.current_path,s.views,s.device,s.browser,s.os,s.country,s.city,s.referrer,u.full_name,u.matric_number,u.academic_level,
+        CAST((julianday(s.last_seen_at)-julianday(s.started_at))*86400 AS INTEGER) AS seconds_on_site, (s.last_seen_at >= ${ONLINE}) AS online
+      FROM visitor_sessions s LEFT JOIN users u ON u.id=s.user_id ${clause} ORDER BY s.started_at DESC LIMIT ? OFFSET ?`).bind(...args, size, all ? 0 : (page - 1) * size).all(),
+    env.DB.prepare(`SELECT COUNT(*) n, COUNT(DISTINCT s.vid) visitors, COALESCE(SUM(s.views),0) views FROM visitor_sessions s LEFT JOIN users u ON u.id=s.user_id ${clause}`).bind(...args).first<{ n: number; visitors: number; views: number }>(),
+  ]);
+  return json({ rows: rows.results ?? [], total: total?.n ?? 0, visitors: total?.visitors ?? 0, views: total?.views ?? 0, page, page_size: size });
+}
+
 export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
   const user = await currentUser(request, env).catch(() => null);
   if (!user || user.status !== 'active') return fail('Sign in to continue.', 401);
   if (!(await hasPermission(env, user, 'analytics', 'read'))) return fail('Analytics permission is required.', 403);
   const [id] = pathOf(params as Record<string, string | string[]>);
+  if (id === 'history') { try { return await history(env, new URL(request.url)); } catch (error) { console.error('Visit history failed:', error); return fail('Visit history is unavailable. Apply the latest database migration.', 500); } }
   try { return id ? await detail(env, id, await hasPermission(env, user, 'members', 'read')) : await overview(env); }
   catch (error) { console.error('Visitor analytics failed:', error); return fail('Visitor analytics are unavailable. Apply the latest database migration.', 500); }
 };
