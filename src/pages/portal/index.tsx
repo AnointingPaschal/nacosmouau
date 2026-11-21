@@ -8,6 +8,8 @@ import { PortalResults } from './Results';
 import { PortalLevelMates } from './LevelMates';
 import { PortalClassElection } from './ClassElection';
 import { PortalRepDesk } from './RepDesk';
+import { PortalAttendance } from './Attendance';
+import { PortalAttendanceDesk } from './AttendanceDesk';
 
 export { PortalHome as PortalOverview } from './Home';
 
@@ -19,6 +21,8 @@ export function PortalRouter() {
     case 'level-mates': return <PortalLevelMates/>;
     case 'class-election': return <PortalClassElection/>;
     case 'rep-desk': return <PortalRepDesk/>;
+    case 'attendance': return <PortalAttendance/>;
+    case 'attendance-desk': return <PortalAttendanceDesk/>;
     case 'courses': return <PortalCourses/>;
     case 'results': return <PortalResults/>;
     case 'payments': return <PortalPayments/>;

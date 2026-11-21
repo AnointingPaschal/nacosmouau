@@ -8,12 +8,14 @@ import { AdminSettings } from './AdminSettings';
 import { AdminPaymentSettings } from './AdminPaymentSettings';
 import { AdminCourses } from './AdminCourses';
 import { AdminClassReps } from './AdminClassReps';
+import { AdminAttendance } from './AdminAttendance';
 
 export { AdminOverview } from './AdminReports';
 
 export function AdminRouter() {
   const { module = '' } = useParams();
   switch (module) {
+    case 'attendance': return <AdminAttendance/>;
     case 'class-reps': return <AdminClassReps/>;
     case 'courses': return <AdminCourses/>;
     case 'members': return <AdminMembers/>;
