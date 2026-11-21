@@ -1,5 +1,5 @@
 import { Env, currentUser, hasPermission } from '../auth/_shared';
-import { reconcilePaystack, applyPaymentSuccess, audit, bankDetails, currentSession, duesSchedule, ensureMembership, fail, json, pathOf, readBody, text } from '../_portal';
+import { paystackCheck, paystackSettled, reconcilePaystack, applyPaymentSuccess, audit, bankDetails, currentSession, duesSchedule, ensureMembership, fail, json, pathOf, readBody, text } from '../_portal';
 import { withStoredPaystackKey } from '../_secure';
 
 type Staff = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
@@ -75,6 +75,19 @@ async function roles(env: Env, user: Staff) {
   if (!(await allow(env, user, 'roles', 'read'))) return denied();
   const rows = await env.DB.prepare('SELECT r.id,r.name,r.description,(SELECT COUNT(*) FROM role_permissions rp WHERE rp.role_id=r.id) permissions,(SELECT COUNT(*) FROM user_roles ur WHERE ur.role_id=r.id) members FROM roles r ORDER BY r.name').all();
   return json(rows.results ?? []);
+}
+
+async function verifyOnline(baseEnv: Env, user: Staff, id: string) {
+  if (!(await allow(baseEnv, user, 'payments', 'update'))) return denied();
+  const env = await withStoredPaystackKey(baseEnv);
+  const p = await env.DB.prepare('SELECT id,reference,amount_minor,status,method FROM payments WHERE id=?').bind(id).first<{ id: string; reference: string; amount_minor: number; status: string; method: string }>();
+  if (!p) return fail('Payment not found.', 404);
+  if (p.method !== 'paystack') return fail('Only Paystack payments can be checked online.', 409);
+  if (p.status === 'successful') return json({ status: 'successful', message: 'Already approved.' });
+  if (!env.PAYSTACK_SECRET_KEY) return fail('The Paystack secret key is not set.', 503);
+  const check = await paystackCheck(env, p.reference);
+  if (paystackSettled(p.amount_minor, check.data)) { await applyPaymentSuccess(env, p.id, user.id, 'Confirmed with Paystack'); return json({ status: 'successful', message: 'Paystack confirmed this payment.' }); }
+  return json({ status: 'pending', gateway: check.data?.status ?? 'unknown', http: check.http, message: check.message || check.data?.gateway_response || 'No answer from Paystack.', charged: check.data?.amount ?? null, expected: p.amount_minor });
 }
 
 async function paymentList(request: Request, env: Env, user: Staff) {
@@ -185,6 +198,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (a === 'members' && b && c === 'roles' && m === 'POST') return await changeRole(request, env, user, b);
     if (a === 'roles' && m === 'GET') return await roles(env, user);
     if (a === 'payments' && !b && m === 'GET') return await paymentList(request, env, user);
+    if (a === 'payments' && b && c === 'verify' && m === 'POST') return await verifyOnline(env, user, b);
     if (a === 'payments' && b && m === 'PATCH') return await reviewPayment(request, env, user, b);
     if (a === 'finance' && m === 'GET') return await finance(env, user);
     if (a === 'analytics' && m === 'GET') return await analytics(env, user);

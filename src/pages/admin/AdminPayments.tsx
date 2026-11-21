@@ -14,6 +14,13 @@ export function AdminPayments() {
   const client = useQueryClient();
   const [status, setStatus] = useState('pending'); const [purpose, setPurpose] = useState(''); const [search, setSearch] = useState(''); const [rejecting, setRejecting] = useState<P | null>(null); const [note, setNote] = useState('');
   const q = useQuery({ queryKey: ['staff', 'payments', status, purpose, search], queryFn: ({ signal }) => api.get<P[]>(`staff/payments?${new URLSearchParams({ status, purpose, search })}`, signal), retry: false });
+  const checkOnline = async (p: P) => {
+    try {
+      const r = await api.post<{ status: string; gateway?: string; message?: string; http?: number; charged?: number | null; expected?: number }>(`staff/payments/${p.id}/verify`, {});
+      if (r.status === 'successful') { toast.success(r.message ?? 'Paystack confirmed this payment.'); await client.invalidateQueries({ queryKey: ['staff'] }); }
+      else toast.message(`Paystack says: ${r.gateway === 'unknown' ? 'no record' : r.gateway} (HTTP ${r.http ?? '?'}). ${r.message ?? ''}${r.charged != null ? ` Charged ${naira(r.charged)}, expected ${naira(r.expected ?? 0)}.` : ''}`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Could not check with Paystack'); }
+  };
   const review = async (p: P, decision: 'approve' | 'reject', why = '') => {
     try { await api.patch(`staff/payments/${p.id}`, { decision, note: why }); toast.success(decision === 'approve' ? 'Payment approved' : 'Payment rejected'); setRejecting(null); setNote(''); await client.invalidateQueries({ queryKey: ['staff'] }); }
     catch (e) { toast.error(e instanceof Error ? e.message : 'Could not review the payment'); }
@@ -31,6 +38,7 @@ export function AdminPayments() {
           <div className="member-info"><strong>{p.full_name ?? 'Member'} · {naira(p.amount_minor)}</strong><span className="mono">{p.matric_number ?? '—'} · {p.academic_level ? `${p.academic_level}L` : ''}</span><span>{p.due_title ?? purposeLabel[p.purpose ?? ''] ?? 'Payment'}{p.session ? ` · ${p.session}` : ''} · {p.method === 'transfer' ? 'Bank teller' : 'Paystack'} · {when(p.created_at)}</span><span className="mono">{p.reference}{p.depositor_name ? ` · ${p.depositor_name}` : ''}</span>{p.review_note && <span className="note-bad">{p.review_note}</span>}</div>
           <div className="member-actions"><Pill value={p.status === 'pending' && p.method === 'paystack' ? 'confirming' : p.status}/>
             {p.proof_url && <a className="button button-outline btn-sm" href={p.proof_url} target="_blank" rel="noreferrer"><ExternalLink size={14}/> View teller</a>}
+            {p.status === 'pending' && p.method === 'paystack' && <button className="button button-outline btn-sm" onClick={() => void checkOnline(p)}>Check with Paystack</button>}
             {p.status === 'pending' && p.method !== 'paystack' && <><button className="button button-green btn-sm" onClick={() => void review(p, 'approve')}><Check size={14}/> Approve</button><button className="button button-outline btn-sm" onClick={() => setRejecting(p)}><X size={14}/> Reject</button></>}
           </div></article>)}</div>}
     </Panel>

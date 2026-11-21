@@ -90,11 +90,18 @@ export async function paystackInitialize(env: Env, input: { email: string; amoun
   return body.data.authorization_url;
 }
 
-export async function paystackVerify(env: Env, reference: string) {
-  const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, { headers: { Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}` } });
-  const body = await response.json<{ status: boolean; data?: { status: string; amount: number; currency: string; reference: string } }>().catch(() => null);
-  return response.ok && body?.status ? body.data ?? null : null;
+export interface PaystackTx { status: string; amount: number; requested_amount?: number; currency: string; reference: string; gateway_response?: string }
+/** Full answer from Paystack, including why it could not be read, so a stuck payment can be explained. */
+export async function paystackCheck(env: Env, reference: string) {
+  try {
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, { headers: { Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}` } });
+    const body = await response.json<{ status: boolean; message?: string; data?: PaystackTx }>().catch(() => null);
+    return { http: response.status, ok: response.ok && Boolean(body?.status), message: body?.message ?? '', data: response.ok && body?.status ? body.data ?? null : null };
+  } catch (error) { return { http: 0, ok: false, message: error instanceof Error ? error.message : 'Could not reach Paystack', data: null }; }
 }
+export async function paystackVerify(env: Env, reference: string) { return (await paystackCheck(env, reference)).data; }
+/** A successful Naira charge that covers the amount we asked for. Paystack may add its fee on top when the customer bears it. */
+export const paystackSettled = (expected: number, tx: PaystackTx | null | undefined) => Boolean(tx && tx.status === 'success' && tx.currency === 'NGN' && (tx.amount >= expected || (tx.requested_amount ?? 0) === expected));
 
 /** Asks Paystack about payments still marked pending, so a member who paid is approved without waiting for anyone. */
 export async function reconcilePaystack(env: Env, userId: string | null = null, limit = 6) {
@@ -104,7 +111,7 @@ export async function reconcilePaystack(env: Env, userId: string | null = null, 
   let approved = 0;
   for (const p of rows.results ?? []) {
     const r = await paystackVerify(env, p.reference).catch(() => null);
-    if (r?.status === 'success' && r.amount === p.amount_minor && r.currency === 'NGN') { await applyPaymentSuccess(env, p.id); approved += 1; }
+    if (paystackSettled(p.amount_minor, r)) { await applyPaymentSuccess(env, p.id); approved += 1; }
     else if ((r && ['failed', 'reversed'].includes(r.status)) || p.age_min > 30) await env.DB.prepare("UPDATE payments SET status='failed',review_note=? WHERE id=? AND status='pending'").bind('The Paystack payment was not completed.', p.id).run();
   }
   return approved;

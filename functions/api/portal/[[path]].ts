@@ -1,7 +1,7 @@
 import { Env, currentUser, passwordHash, verifyPassword } from '../auth/_shared';
 import { withStoredPaystackKey } from '../_secure';
 import { duesForMember, dueStatus, levelApplies, type DuesItem } from '../_dues';
-import { reconcilePaystack, applyPaymentSuccess, audit, tally, bankDetails, currentSession, duesAmountForUser, duesPaid, ensureMembership, fail, fileKey, json, pathOf, paystackInitialize, paystackReady, paystackVerify, randomId, readBody, text } from '../_portal';
+import { reconcilePaystack, applyPaymentSuccess, audit, tally, bankDetails, currentSession, duesAmountForUser, duesPaid, ensureMembership, fail, fileKey, json, pathOf, paystackCheck, paystackSettled, paystackInitialize, paystackReady, paystackVerify, randomId, readBody, text } from '../_portal';
 
 type Me = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 const publicPhoto = (key: unknown) => (typeof key === 'string' && key ? `/api/files/${key}` : null);
@@ -145,10 +145,10 @@ async function verifyPayment(request: Request, env: Env, user: Me) {
   if (payment.status === 'successful') return json({ status: 'successful' });
   if (payment.method !== 'paystack') return json({ status: payment.status });
   if (!paystackReady(env)) return fail('Online payment is not configured.', 503);
-  const result = await paystackVerify(env, reference);
-  if (result?.status === 'success' && result.amount === payment.amount_minor && result.currency === 'NGN') { await applyPaymentSuccess(env, payment.id); return json({ status: 'successful' }); }
-  if (result && ['failed', 'abandoned', 'reversed'].includes(result.status)) await env.DB.prepare("UPDATE payments SET status='failed' WHERE id=? AND status='pending'").bind(payment.id).run();
-  return json({ status: result?.status === 'success' ? 'mismatch' : 'pending', gateway: result?.status ?? 'unknown' });
+  const check = await paystackCheck(env, reference); const result = check.data;
+  if (paystackSettled(payment.amount_minor, result)) { await applyPaymentSuccess(env, payment.id); return json({ status: 'successful' }); }
+  if (result && ['failed', 'abandoned', 'reversed'].includes(result.status)) await env.DB.prepare("UPDATE payments SET status='failed',review_note=? WHERE id=? AND status='pending'").bind('The Paystack payment was not completed.', payment.id).run();
+  return json({ status: result?.status === 'success' ? 'mismatch' : 'pending', gateway: result?.status ?? 'unknown', message: check.message || result?.gateway_response || '', http: check.http, charged: result?.amount ?? null, expected: payment.amount_minor });
 }
 
 async function electionList(env: Env, user: Me) {

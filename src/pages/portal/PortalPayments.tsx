@@ -15,7 +15,16 @@ const StatusIcon = ({ s }: { s: DueRow['status'] }) => s === 'paid' ? <CheckCirc
 
 function DueCard({ due, info }: { due: DueRow; info: PayInfo }) {
   const client = useQueryClient(); const [open, setOpen] = useState(false); const [checking, setChecking] = useState(false);
-  const check = async () => { if (!due.payment?.reference) return; setChecking(true); try { const r = await api.post<{ status: string }>('portal/payments/verify', { reference: due.payment.reference }); toast[r.status === 'successful' ? 'success' : 'message'](r.status === 'successful' ? 'Payment confirmed. Thank you!' : 'Paystack has not confirmed it yet. We will keep checking.'); await client.invalidateQueries({ queryKey: ['portal'] }); } catch (e) { toast.error(e instanceof Error ? e.message : 'Could not check the payment'); } finally { setChecking(false); } };
+  const check = async () => {
+    if (!due.payment?.reference) return; setChecking(true);
+    try {
+      const r = await api.post<{ status: string; gateway?: string; message?: string; charged?: number | null; expected?: number }>('portal/payments/verify', { reference: due.payment.reference });
+      if (r.status === 'successful') toast.success('Payment confirmed. Thank you!');
+      else if (r.status === 'mismatch') toast.error(`Paystack charged ${naira(r.charged ?? 0)} but ${naira(r.expected ?? 0)} was expected. Please contact the executives.`);
+      else toast.message(`Paystack says: ${r.gateway === 'unknown' ? 'no record yet' : r.gateway}${r.message ? `. ${r.message}` : ''}`);
+      await client.invalidateQueries({ queryKey: ['portal'] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Could not check the payment'); } finally { setChecking(false); }
+  };
   const payable = due.amount_minor > 0 && (due.status === 'unpaid' || due.status === 'rejected');
   const late = due.due_date && due.status !== 'paid' && due.due_date < new Date().toISOString().slice(0, 10);
   return <article className={`due-card ${statusTone[due.status]}`}>
@@ -38,8 +47,8 @@ export function PortalPayments() {
   const reference = params.get('reference') ?? params.get('trxref');
   useEffect(() => {
     if (!reference || handled.current) return; handled.current = true;
-    api.post<{ status: string }>('portal/payments/verify', { reference }).then(r => {
-      if (r.status === 'successful') toast.success('Payment confirmed. Thank you!'); else toast.message('We are still confirming your payment. Refresh in a moment.');
+    api.post<{ status: string; gateway?: string; message?: string }>('portal/payments/verify', { reference }).then(r => {
+      if (r.status === 'successful') toast.success('Payment confirmed. Thank you!'); else toast.message(`Paystack says: ${r.gateway === 'unknown' ? 'no record yet' : r.gateway ?? 'pending'}${r.message ? `. ${r.message}` : ''}`);
     }).catch(e => toast.error(e instanceof Error ? e.message : 'Could not confirm the payment')).finally(() => { setParams({}, { replace: true }); void client.invalidateQueries({ queryKey: ['portal'] }); });
   }, [reference, client, setParams]);
   if (q.isLoading) return <LoadingState/>;
