@@ -289,3 +289,16 @@ html[data-scrolled] .site-header { box-shadow: 0 14px 40px -18px #07210f55; }
 :root[data-theme=dark] .news-row .row-icon { background: #12281d; }
 .news-row > svg:last-child { flex: none; width: 34px; height: 34px; padding: 9px; margin-top: 6px; border-radius: 50%; background: var(--soft); transition: background .3s, color .3s, transform .4s var(--ease); }
 .news-row:hover > svg:last-child { background: var(--brand); color: #fff; transform: rotate(45deg); }
+
+/* Images fit their frames fully (contain) for passports, previews, posters and portraits */
+.file-upload-preview { height: auto; max-height: 260px; object-fit: contain; background: var(--soft); border: 1px solid var(--line); padding: 4px; }
+.idc-photo img, .cand-photo img, .exec-portrait img, .executive-photo img, .president-portrait img { object-fit: contain; object-position: center; }
+.idc-photo, .cand-photo, .exec-portrait, .president-portrait { background-color: #e1f3e8; }
+:root[data-theme=dark] .exec-portrait { background-color: #12281d; }
+.president-portrait img { background: #0b120e; }
+.executive-photo { display: grid; place-items: center; }
+.event-card > img, .publication-card > img, .achievement-card img, .slide-manager-card > img { object-fit: contain; background: var(--soft); }
+.event-detail-image, .article-hero { object-fit: contain; height: auto; max-height: 520px; background: var(--soft); }
+.lightbox img, .photo-tile img, .album-cover img { object-fit: contain; }
+.photo-tile, .album-cover { background: var(--soft); }
+.rp-face img, .cand-thumb img, .ev-speaker img { object-position: center top; }

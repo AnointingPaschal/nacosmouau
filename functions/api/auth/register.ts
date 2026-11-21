@@ -11,6 +11,10 @@ const MATRIC = /^MOUAU\/CMP\/\d{2}\/\d{3,7}$/;
 const JAMB = /^\d{8,10}[A-Z]{1,2}$/;
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const gate = await env.DB.prepare("SELECT value_json FROM system_settings WHERE key='registration_open'").first<{ value_json: string }>();
+  let open = false;
+  try { open = JSON.parse(gate?.value_json ?? 'false') === true; } catch { open = false; }
+  if (!open) return fail('Member registration is currently closed.', 403);
   let body: RegistrationBody;
   try { body = await request.json(); } catch { return fail('Invalid request body.'); }
   const email = body.email?.trim().toLowerCase() ?? '';
