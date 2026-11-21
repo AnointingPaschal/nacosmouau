@@ -136,10 +136,24 @@ async function analytics(env: Env, user: Staff) {
   return json({ session, active_members: active?.n ?? 0, dues_payers: paid?.n ?? 0, by_level: byLevel.results ?? [], signups: (byMonth.results ?? []).reverse(), event_registrations: events.results ?? [] });
 }
 
-async function auditLog(env: Env, user: Staff) {
+async function auditLog(request: Request, env: Env, user: Staff) {
   if (!(await allow(env, user, 'audit', 'read'))) return denied();
-  const rows = await env.DB.prepare('SELECT a.id,a.action,a.resource,a.record_id,a.details_json,a.created_at,u.full_name actor FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.created_at DESC LIMIT 200').all();
-  return json(rows.results ?? []);
+  const q = new URL(request.url).searchParams; const where: string[] = []; const args: unknown[] = [];
+  const term = (q.get('q') ?? '').trim().slice(0, 80);
+  if (term) { const like = `%${term}%`; where.push('(a.action LIKE ? OR a.resource LIKE ? OR a.details_json LIKE ? OR a.record_id LIKE ? OR u.full_name LIKE ?)'); args.push(like, like, like, like, like); }
+  const resource = (q.get('resource') ?? '').trim().slice(0, 60); if (resource) { where.push('a.resource=?'); args.push(resource); }
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  const from = q.get('from') ?? ''; if (day.test(from)) { where.push('a.created_at >= ?'); args.push(from); }
+  const to = q.get('to') ?? ''; if (day.test(to)) { where.push("a.created_at < date(?, '+1 day')"); args.push(to); }
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const all = q.get('all') === '1'; const size = all ? 5000 : 30; const page = Math.max(1, Number(q.get('page')) || 1);
+  const base = `FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_user_id ${clause}`;
+  const [rows, total, resources] = await Promise.all([
+    env.DB.prepare(`SELECT a.id,a.action,a.resource,a.record_id,a.details_json,a.created_at,u.full_name actor,u.matric_number ${base} ORDER BY a.created_at DESC LIMIT ? OFFSET ?`).bind(...args, size, all ? 0 : (page - 1) * size).all(),
+    env.DB.prepare(`SELECT COUNT(*) n ${base}`).bind(...args).first<{ n: number }>(),
+    env.DB.prepare('SELECT resource,COUNT(*) n FROM audit_logs GROUP BY resource ORDER BY n DESC LIMIT 40').all(),
+  ]);
+  return json({ rows: rows.results ?? [], total: total?.n ?? 0, page, page_size: size, resources: (resources.results ?? []).map(r => (r as { resource: string }).resource) });
 }
 
 async function welfare(request: Request, env: Env, user: Staff, id?: string) {
@@ -172,7 +186,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (a === 'payments' && b && m === 'PATCH') return await reviewPayment(request, env, user, b);
     if (a === 'finance' && m === 'GET') return await finance(env, user);
     if (a === 'analytics' && m === 'GET') return await analytics(env, user);
-    if (a === 'audit' && m === 'GET') return await auditLog(env, user);
+    if (a === 'audit' && m === 'GET') return await auditLog(request, env, user);
     if (a === 'welfare') return await welfare(request, env, user, b);
     return fail('Not found.', 404);
   } catch (error) {

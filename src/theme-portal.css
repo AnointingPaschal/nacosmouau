@@ -348,3 +348,14 @@
 @media (max-width: 640px) { .visitor-row { align-items: flex-start; } .visitor-meta { display: none; } }
 .pager { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; color: var(--muted); }
 .filter-bar input[type=date], .filter-bar > input:not(.crud-search) { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); padding: 0 12px; font-size: 14px; max-width: 100%; }
+
+/* audit log */
+.audit-list { margin: 0; padding: 0; list-style: none; display: grid; }
+.audit-item { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); min-width: 0; } .audit-item:last-child { border-bottom: 0; }
+.audit-icon { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--soft); color: var(--muted); }
+.audit-item.is-ok .audit-icon { background: #e3f5ea; color: #067a3f; } .audit-item.is-bad .audit-icon { background: #fde8e6; color: #b42318; } .audit-item.is-key .audit-icon { background: #fff4d6; color: #8a5a00; } .audit-item.is-edit .audit-icon { background: #e6f0fb; color: #1f5fa8; }
+.audit-main { flex: 1; min-width: 0; display: grid; gap: 6px; } .audit-main p { margin: 0; font-size: 14.5px; line-height: 1.45; overflow-wrap: anywhere; } .audit-main p span { color: var(--muted); } .audit-main p em { font-style: normal; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--soft); font-size: 12.5px; }
+.audit-main small { color: var(--subtle); font-size: 12px; }
+.audit-details { display: flex; flex-wrap: wrap; gap: 6px; } .audit-details span { max-width: 100%; padding: 4px 10px; border-radius: 10px; background: var(--soft); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; word-break: break-word; } .audit-details b { color: var(--ink); text-transform: capitalize; margin-right: 4px; }
+.audit-details button { border: 0; background: transparent; color: var(--brand); font: 600 12px var(--font-body); cursor: pointer; text-decoration: underline; padding: 4px 2px; }
+.workspace-main, .workspace-panel { min-width: 0; } .workspace-panel { overflow-wrap: anywhere; }

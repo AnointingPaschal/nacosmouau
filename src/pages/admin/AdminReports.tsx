@@ -60,14 +60,6 @@ export function AdminAnalytics() {
   </>;
 }
 
-export function AdminAudit() {
-  const q = useQuery({ queryKey: ['staff', 'audit'], queryFn: ({ signal }) => api.get<Array<{ id: string; action: string; resource: string; details_json: string | null; created_at: string; actor: string | null }>>('staff/audit', signal), retry: false });
-  return <>
-    <PageTitle eyebrow="SECURITY" title="Audit log" description="Who changed what, newest first."/>
-    <Panel>{q.isLoading ? <LoadingState/> : q.error ? <ErrorState error={q.error}/> : !q.data?.length ? <EmptyState title="Nothing logged yet" text="Approvals, role changes and settings updates are recorded here."/> : <div className="record-list">{q.data.map(a => <article className="record-row" key={a.id}><div><strong>{a.actor ?? 'System'} · {a.action} {a.resource}</strong>{a.details_json && <span className="mono">{a.details_json.slice(0, 140)}</span>}</div><time>{when(a.created_at)}</time></article>)}</div>}</Panel>
-  </>;
-}
-
 interface W { id: string; category: string; subject: string; details: string; status: string; response: string | null; created_at: string; full_name: string; matric_number: string | null }
 export function AdminWelfare() {
   const client = useQueryClient();
