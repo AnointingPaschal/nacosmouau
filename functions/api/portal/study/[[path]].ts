@@ -83,6 +83,12 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (!a && method === 'GET') return await state(env, user);
     if (a === 'register' && method === 'POST') return await register(request, env, user);
     if (a === 'courses' && method === 'POST') return await createCourse(request, env, user);
+    if (a === 'records' && b === 'bulk-delete' && method === 'POST') {
+      const body = await readBody(request); const ids = Array.isArray(body?.ids) ? body!.ids.map(String).slice(0, 200) : [];
+      if (!ids.length) return fail('Choose at least one course to remove.');
+      const result = await env.DB.prepare(`DELETE FROM member_courses WHERE user_id=? AND id IN (${ids.map(() => '?').join(',')})`).bind(user.id, ...ids).run();
+      return json({ ok: true, removed: result.meta?.changes ?? 0 });
+    }
     if (a === 'records' && b && method === 'PUT') return await updateRecord(request, env, user, b);
     if (a === 'records' && b && method === 'DELETE') {
       await env.DB.prepare('DELETE FROM member_courses WHERE id=? AND user_id=?').bind(b, user.id).run();

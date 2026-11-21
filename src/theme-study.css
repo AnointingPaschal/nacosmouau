@@ -218,3 +218,13 @@
 }
 /* Sticky top bars must not show content through them */
 .workspace-topbar { background: var(--page); backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* Bulk remove */
+.study-bulk { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 0 4px; padding: 8px 10px; border-radius: 12px; background: var(--soft); }
+.study-bulk label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.study-bulk input, .study-mine input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--brand); }
+.study-bulk-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: 0; border-radius: 10px; background: #c0392b; color: #fff; font-size: 12.5px; font-weight: 700; transition: opacity .2s, transform .25s var(--ease); }
+.study-bulk-btn:disabled { opacity: .35; cursor: not-allowed; }
+.study-bulk-btn:not(:disabled):hover { transform: translateY(-2px); }
+.study-mine li { grid-template-columns: 22px minmax(0, 1fr) auto auto; }
+.study-mine li.is-picked { background: #fde5e133; }

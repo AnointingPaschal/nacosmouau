@@ -42,6 +42,7 @@ export function PortalCourses() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [adding, setAdding] = useState(false);
+  const [doomed, setDoomed] = useState<Set<string>>(new Set());
 
   const level = levelPick ?? q.data?.level ?? '100';
   const activeSession = session ?? q.data?.session ?? '';
@@ -67,6 +68,12 @@ export function PortalCourses() {
     mutationFn: (id: string) => api.delete(`portal/study/records/${id}`),
     onSuccess: async () => { toast.success('Course removed'); await client.invalidateQueries({ queryKey: ['portal', 'study'] }); },
     onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not remove the course'),
+  });
+
+  const bulkRemove = useMutation({
+    mutationFn: (ids: string[]) => api.post<{ removed: number }>('portal/study/records/bulk-delete', { ids }),
+    onSuccess: async (r) => { toast.success(`${r.removed} course${r.removed === 1 ? '' : 's'} removed`); setDoomed(new Set()); await client.invalidateQueries({ queryKey: ['portal', 'study'] }); },
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not remove the courses'),
   });
 
   if (q.isLoading) return <LoadingState/>;
@@ -115,7 +122,13 @@ export function PortalCourses() {
       <aside className="study-side">
         <Panel title={`Registered for ${activeSession}`}>
           <div className="study-meter"><strong>{heldUnits}<small>/{MAX_UNITS}</small></strong><span>credit units registered</span></div>
-          {sessionRecords.length === 0 ? <p className="field-hint"><BookOpen size={14}/> Nothing registered for this session yet.</p> : [1, 2].map(sem => { const list = sessionRecords.filter(r => r.semester === sem); return list.length === 0 ? null : <div key={sem}><h4 className="study-mine-head">{semesterName(sem)}</h4><ul className="study-mine">{list.map(r => <li key={r.id}><div><b>{r.code}</b><span>{r.title}</span></div><em>{r.units}u</em><button aria-label={`Remove ${r.code}`} onClick={() => { if (window.confirm(`Remove ${r.code} from ${r.session}? Any grade you saved for it is removed too.`)) remove.mutate(r.id); }}><Trash2 size={15}/></button></li>)}</ul></div>; })}
+          {sessionRecords.length === 0 ? <p className="field-hint"><BookOpen size={14}/> Nothing registered for this session yet.</p> : <>
+            <div className="study-bulk">
+              <label><input type="checkbox" checked={doomed.size === sessionRecords.length} onChange={() => setDoomed(doomed.size === sessionRecords.length ? new Set() : new Set(sessionRecords.map(r => r.id)))}/> Select all ({sessionRecords.length})</label>
+              <button type="button" className="study-bulk-btn" disabled={doomed.size === 0 || bulkRemove.isPending} onClick={() => { if (window.confirm(`Remove ${doomed.size} course${doomed.size === 1 ? '' : 's'} from ${activeSession}? Any grades saved for them are removed too.`)) bulkRemove.mutate([...doomed]); }}><Trash2 size={14}/> {bulkRemove.isPending ? 'Removing…' : `Remove${doomed.size ? ` (${doomed.size})` : ''}`}</button>
+            </div>
+            {[1, 2].map(sem => { const list = sessionRecords.filter(r => r.semester === sem); return list.length === 0 ? null : <div key={sem}><h4 className="study-mine-head">{semesterName(sem)}</h4><ul className="study-mine">{list.map(r => <li key={r.id} className={doomed.has(r.id) ? 'is-picked' : ''}><input type="checkbox" aria-label={`Select ${r.code}`} checked={doomed.has(r.id)} onChange={() => setDoomed(prev => { const next = new Set(prev); if (next.has(r.id)) next.delete(r.id); else next.add(r.id); return next; })}/><div><b>{r.code}</b><span>{r.title}</span></div><em>{r.units}u</em><button aria-label={`Remove ${r.code}`} onClick={() => { if (window.confirm(`Remove ${r.code} from ${r.session}? Any grade you saved for it is removed too.`)) remove.mutate(r.id); }}><Trash2 size={15}/></button></li>)}</ul></div>; })}
+          </>}
         </Panel>
       </aside>
     </div>
