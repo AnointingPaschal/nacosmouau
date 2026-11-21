@@ -339,3 +339,10 @@
   .att-recent button { grid-template-columns: auto 1fr; } .att-recent em { grid-column: 1 / -1; }
 }
 .att-chips { display: flex; flex-wrap: wrap; gap: 8px; } .att-chips button { display: grid; gap: 1px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; color: var(--ink); transition: border-color .25s, transform .3s var(--ease); } .att-chips button:hover { border-color: var(--brand); transform: translateY(-2px); } .att-chips b { font-size: 14px; } .att-chips span { font-size: 11.5px; color: var(--subtle); }
+
+/* Smaller page content across every portal and admin page (sidebar and top bar stay full size) */
+.workspace-content { zoom: .92; }
+@media (max-width: 760px) { .workspace-content { zoom: .84; padding-inline: 12px; } }
+/* Fixed overlays keep their normal size so they still cover the screen */
+.workspace-content .modal-scrim, .workspace-content .modal-backdrop, .workspace-content .lightbox { zoom: 1.0870; }
+@media (max-width: 760px) { .workspace-content .modal-scrim, .workspace-content .modal-backdrop, .workspace-content .lightbox { zoom: 1.1905; } }
