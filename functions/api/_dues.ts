@@ -3,15 +3,17 @@ import { audit, currentSession, duesSchedule, duesAmount, fail, LEVELS } from '.
 
 export interface DuesItem { id: string; title: string; description: string | null; amount_minor: number; levels: string | null; session: string; due_date: string | null; is_active: number }
 export const levelApplies = (levels: string | null, level: string | null) => !levels || (level !== null && levels.split(',').includes(level));
-export type DueStatus = 'paid' | 'pending' | 'rejected' | 'unpaid';
+export type DueStatus = 'paid' | 'pending' | 'confirming' | 'rejected' | 'unpaid';
 
 /** Status of one due for one member, from their payments for it. */
 export async function dueStatus(env: Env, userId: string, purpose: 'dues' | 'custom_due', refId: string | null, session: string) {
-  const rows = await env.DB.prepare(`SELECT id,reference,status,method,review_note,created_at FROM payments WHERE user_id=? AND purpose=? AND session=? ${refId ? 'AND ref_id=?' : ''} ORDER BY created_at DESC LIMIT 5`)
-    .bind(...(refId ? [userId, purpose, session, refId] : [userId, purpose, session])).all<{ id: string; reference: string; status: string; method: string; review_note: string | null; created_at: string }>();
+  const rows = await env.DB.prepare(`SELECT id,reference,status,method,review_note,created_at,(julianday('now')-julianday(created_at))*1440 AS age_min FROM payments WHERE user_id=? AND purpose=? AND session=? ${refId ? 'AND ref_id=?' : ''} ORDER BY created_at DESC LIMIT 5`)
+    .bind(...(refId ? [userId, purpose, session, refId] : [userId, purpose, session])).all<{ id: string; reference: string; status: string; method: string; review_note: string | null; created_at: string; age_min: number }>();
   const list = rows.results ?? [];
   const ok = list.find(p => p.status === 'successful'); if (ok) return { status: 'paid' as DueStatus, payment: ok };
-  const wait = list.find(p => p.status === 'pending'); if (wait) return { status: 'pending' as DueStatus, payment: wait };
+  const wait = list.find(p => p.status === 'pending' && p.method === 'transfer'); if (wait) return { status: 'pending' as DueStatus, payment: wait };
+  // A Paystack payment is confirmed automatically, so it is never "awaiting approval". It only shows as confirming for a short while.
+  const online = list.find(p => p.status === 'pending' && p.method === 'paystack' && p.age_min < 30); if (online) return { status: 'confirming' as DueStatus, payment: online };
   const bad = list.find(p => p.status === 'failed'); if (bad) return { status: 'rejected' as DueStatus, payment: bad };
   return { status: 'unpaid' as DueStatus, payment: null };
 }

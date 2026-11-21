@@ -1,5 +1,6 @@
 import { Env, currentUser, hasPermission } from '../../auth/_shared';
-import { audit, currentSession, fail, fileKey, json, pathOf, randomId, readBody, tally, text } from '../../_portal';
+import { withStoredPaystackKey } from '../../_secure';
+import { reconcilePaystack, audit, currentSession, fail, fileKey, json, pathOf, randomId, readBody, tally, text } from '../../_portal';
 
 type Staff = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 const STATUSES = ['draft', 'nominations', 'voting', 'closed'];
@@ -27,12 +28,13 @@ function levelList(input: unknown): string | null | undefined {
 const canContest = (levels: string | null, level: string | null) => !levels || (level !== null && levels.split(',').includes(level));
 
 async function detail(env: Env, id: string) {
+  await reconcilePaystack(await withStoredPaystackKey(env), null, 10).catch(() => 0);
   const election = await env.DB.prepare('SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor,live_results FROM elections WHERE id=?').bind(id).first();
   if (!election) return fail('Election not found.', 404);
   const [positions, candidates] = await Promise.all([
     env.DB.prepare('SELECT id,title,display_order,eligible_levels FROM election_positions WHERE election_id=? ORDER BY display_order,title').bind(id).all(),
     env.DB.prepare(`SELECT c.id,c.position_id,c.user_id,c.display_name,c.manifesto,c.photo_key,c.status,c.screening_note,u.matric_number,u.academic_level,
-      (SELECT status FROM payments p WHERE p.ref_id=c.id AND p.purpose='candidate_form' ORDER BY (p.status='successful') DESC,p.created_at DESC LIMIT 1) payment_status
+      (SELECT CASE WHEN p.status='pending' AND p.method='paystack' THEN 'confirming' ELSE p.status END FROM payments p WHERE p.ref_id=c.id AND p.purpose='candidate_form' ORDER BY (p.status='successful') DESC,p.created_at DESC LIMIT 1) payment_status
       FROM election_candidates c LEFT JOIN users u ON u.id=c.user_id WHERE c.election_id=? ORDER BY c.display_name`).bind(id).all<Record<string, unknown>>(),
   ]);
   return json({ election, positions: positions.results ?? [], candidates: (candidates.results ?? []).map(c => ({ ...c, photo_url: c.photo_key ? `/api/files/${c.photo_key}` : null, photo_key: undefined })) });

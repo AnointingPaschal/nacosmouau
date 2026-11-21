@@ -1,7 +1,7 @@
 import { Env, currentUser, passwordHash, verifyPassword } from '../auth/_shared';
 import { withStoredPaystackKey } from '../_secure';
 import { duesForMember, dueStatus, levelApplies, type DuesItem } from '../_dues';
-import { applyPaymentSuccess, audit, tally, bankDetails, currentSession, duesAmountForUser, duesPaid, ensureMembership, fail, fileKey, json, pathOf, paystackInitialize, paystackReady, paystackVerify, randomId, readBody, text } from '../_portal';
+import { reconcilePaystack, applyPaymentSuccess, audit, tally, bankDetails, currentSession, duesAmountForUser, duesPaid, ensureMembership, fail, fileKey, json, pathOf, paystackInitialize, paystackReady, paystackVerify, randomId, readBody, text } from '../_portal';
 
 type Me = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 const publicPhoto = (key: unknown) => (typeof key === 'string' && key ? `/api/files/${key}` : null);
@@ -12,9 +12,8 @@ async function profile(env: Env, user: Me) {
 
 /** Dues state for the current session: paid, pending (awaiting approval), rejected or unpaid. */
 async function duesState(env: Env, userId: string, session: string) {
-  const latest = await env.DB.prepare("SELECT id,status,method,amount_minor,reference,created_at,review_note FROM payments WHERE user_id=? AND purpose='dues' AND session=? ORDER BY (status='successful') DESC, created_at DESC LIMIT 1").bind(userId, session).first<Record<string, unknown>>();
-  const status = !latest ? 'unpaid' : latest.status === 'successful' ? 'paid' : latest.status === 'pending' ? 'pending' : 'rejected';
-  return { status, payment: latest };
+  await reconcilePaystack(env, userId);
+  return dueStatus(env, userId, 'dues', null, session);
 }
 
 async function overview(env: Env, user: Me) {
@@ -76,6 +75,7 @@ async function updateCandidacy(request: Request, env: Env, user: Me, id: string)
 
 async function payments(env: Env, user: Me) {
   const session = await currentSession(env);
+  await reconcilePaystack(env, user.id);
   const [rows, amount, bank, state] = await Promise.all([
     env.DB.prepare('SELECT id,reference,amount_minor,currency,status,purpose,session,method,ref_id,created_at,paid_at,review_note FROM payments WHERE user_id=? ORDER BY created_at DESC LIMIT 100').bind(user.id).all(),
     duesAmountForUser(env, user.id), bankDetails(env), duesState(env, user.id, session),
@@ -98,7 +98,8 @@ async function createPayment(request: Request, env: Env, user: Me) {
     if (!amount) return fail('NACOS dues have not been set for this session yet. Please check back soon.', 409);
     const existing = await duesState(env, user.id, session);
     if (existing.status === 'paid') return fail(`Your dues for ${session} are already paid.`, 409);
-    if (existing.status === 'pending' && existing.payment?.method === 'transfer') return fail('Your bank transfer is awaiting approval.', 409);
+    if (existing.status === 'pending') return fail('Your bank transfer is awaiting approval.', 409);
+    if (existing.status === 'confirming') return fail('Your Paystack payment is being confirmed. Please wait a minute and refresh.', 409);
   } else if (purpose === 'custom_due') {
     refId = text(body.refId, 80);
     const item = await env.DB.prepare('SELECT id,title,description,amount_minor,levels,session,due_date,is_active FROM dues_items WHERE id=?').bind(refId).first<DuesItem>();
@@ -107,7 +108,8 @@ async function createPayment(request: Request, env: Env, user: Me) {
     if (!levelApplies(item.levels, level)) return fail('These dues do not apply to your level.', 403);
     const existing = await dueStatus(env, user.id, 'custom_due', item.id, session);
     if (existing.status === 'paid') return fail('You have already paid these dues.', 409);
-    if (existing.status === 'pending' && existing.payment?.method === 'transfer') return fail('Your bank transfer is awaiting approval.', 409);
+    if (existing.status === 'pending') return fail('Your bank transfer is awaiting approval.', 409);
+    if (existing.status === 'confirming') return fail('Your Paystack payment is being confirmed. Please wait a minute and refresh.', 409);
     amount = item.amount_minor;
   } else {
     refId = text(body.refId, 80);
@@ -146,10 +148,11 @@ async function verifyPayment(request: Request, env: Env, user: Me) {
   const result = await paystackVerify(env, reference);
   if (result?.status === 'success' && result.amount === payment.amount_minor && result.currency === 'NGN') { await applyPaymentSuccess(env, payment.id); return json({ status: 'successful' }); }
   if (result && ['failed', 'abandoned', 'reversed'].includes(result.status)) await env.DB.prepare("UPDATE payments SET status='failed' WHERE id=? AND status='pending'").bind(payment.id).run();
-  return json({ status: result?.status === 'success' ? 'mismatch' : 'pending' });
+  return json({ status: result?.status === 'success' ? 'mismatch' : 'pending', gateway: result?.status ?? 'unknown' });
 }
 
 async function electionList(env: Env, user: Me) {
+  await reconcilePaystack(env, user.id);
   const session = await currentSession(env);
   const [{ results: elections = [] }, paid] = await Promise.all([
     env.DB.prepare("SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor,live_results FROM elections WHERE status<>'draft' ORDER BY created_at DESC").all<Record<string, unknown>>(),
@@ -157,7 +160,7 @@ async function electionList(env: Env, user: Me) {
   ]);
   const out = [];
   for (const election of elections) {
-    const mine = await env.DB.prepare(`SELECT c.id,c.status,c.screening_note,c.display_name,c.manifesto,c.photo_key,p.title AS position,(SELECT p2.status FROM payments p2 WHERE p2.ref_id=c.id AND p2.purpose='candidate_form' ORDER BY (p2.status='successful') DESC,(p2.status='pending') DESC,p2.created_at DESC LIMIT 1) payment_status,(SELECT p3.review_note FROM payments p3 WHERE p3.ref_id=c.id AND p3.purpose='candidate_form' AND p3.status='failed' ORDER BY p3.created_at DESC LIMIT 1) payment_note FROM election_candidates c JOIN election_positions p ON p.id=c.position_id WHERE c.election_id=? AND c.user_id=?`).bind(election.id, user.id).all();
+    const mine = await env.DB.prepare(`SELECT c.id,c.status,c.screening_note,c.display_name,c.manifesto,c.photo_key,p.title AS position,(SELECT CASE WHEN p2.status='pending' AND p2.method='paystack' THEN 'confirming' ELSE p2.status END FROM payments p2 WHERE p2.ref_id=c.id AND p2.purpose='candidate_form' ORDER BY (p2.status='successful') DESC,(p2.status='pending') DESC,p2.created_at DESC LIMIT 1) payment_status,(SELECT p3.review_note FROM payments p3 WHERE p3.ref_id=c.id AND p3.purpose='candidate_form' AND p3.status='failed' ORDER BY p3.created_at DESC LIMIT 1) payment_note FROM election_candidates c JOIN election_positions p ON p.id=c.position_id WHERE c.election_id=? AND c.user_id=?`).bind(election.id, user.id).all();
     const voted = await env.DB.prepare('SELECT 1 FROM election_voters WHERE election_id=? AND user_id=?').bind(election.id, user.id).first();
     out.push({ ...election, my_candidacies: (mine.results ?? []).map((c: Record<string, unknown>) => ({ ...c, photo_url: c.photo_key ? `/api/files/${c.photo_key}` : null, photo_key: undefined })), has_voted: Boolean(voted) });
   }
@@ -165,6 +168,7 @@ async function electionList(env: Env, user: Me) {
 }
 
 async function electionDetail(env: Env, user: Me, id: string) {
+  await reconcilePaystack(env, user.id);
   const election = await env.DB.prepare("SELECT id,title,description,status,opens_at,closes_at,session,form_fee_minor,live_results FROM elections WHERE id=? AND status<>'draft'").bind(id).first<Record<string, unknown>>();
   if (!election) return fail('Election not found.', 404);
   const session = await currentSession(env);
@@ -184,7 +188,7 @@ async function electionDetail(env: Env, user: Me, id: string) {
   const grouped = (positions.results ?? []).map(p => ({ ...p, candidates: (candidates.results ?? []).filter(c => c.position_id === p.id).map(c => ({ id: c.id, display_name: c.display_name, manifesto: c.manifesto, photo_url: publicPhoto(c.photo_key) })) }));
   const [me, mine] = await Promise.all([
     env.DB.prepare('SELECT academic_level FROM users WHERE id=?').bind(user.id).first<{ academic_level: string | null }>(),
-    env.DB.prepare(`SELECT c.id,c.position_id,c.status,c.screening_note,c.display_name,c.manifesto,c.photo_key,(SELECT p2.status FROM payments p2 WHERE p2.ref_id=c.id AND p2.purpose='candidate_form' ORDER BY (p2.status='successful') DESC,(p2.status='pending') DESC,p2.created_at DESC LIMIT 1) payment_status,(SELECT p3.review_note FROM payments p3 WHERE p3.ref_id=c.id AND p3.purpose='candidate_form' AND p3.status='failed' ORDER BY p3.created_at DESC LIMIT 1) payment_note FROM election_candidates c WHERE c.election_id=? AND c.user_id=?`).bind(id, user.id).all<Record<string, unknown>>(),
+    env.DB.prepare(`SELECT c.id,c.position_id,c.status,c.screening_note,c.display_name,c.manifesto,c.photo_key,(SELECT CASE WHEN p2.status='pending' AND p2.method='paystack' THEN 'confirming' ELSE p2.status END FROM payments p2 WHERE p2.ref_id=c.id AND p2.purpose='candidate_form' ORDER BY (p2.status='successful') DESC,(p2.status='pending') DESC,p2.created_at DESC LIMIT 1) payment_status,(SELECT p3.review_note FROM payments p3 WHERE p3.ref_id=c.id AND p3.purpose='candidate_form' AND p3.status='failed' ORDER BY p3.created_at DESC LIMIT 1) payment_note FROM election_candidates c WHERE c.election_id=? AND c.user_id=?`).bind(id, user.id).all<Record<string, unknown>>(),
   ]);
   const out: Record<string, unknown> = {
     election, positions: grouped, can_vote: !reason, reason, has_voted: Boolean(voted), dues_paid: paid,

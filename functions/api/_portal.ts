@@ -96,6 +96,20 @@ export async function paystackVerify(env: Env, reference: string) {
   return response.ok && body?.status ? body.data ?? null : null;
 }
 
+/** Asks Paystack about payments still marked pending, so a member who paid is approved without waiting for anyone. */
+export async function reconcilePaystack(env: Env, userId: string | null = null, limit = 6) {
+  if (!paystackReady(env)) return 0;
+  const rows = await env.DB.prepare(`SELECT id,reference,amount_minor,(julianday('now')-julianday(created_at))*1440 AS age_min FROM payments WHERE status='pending' AND method='paystack' AND created_at > datetime('now','-7 days') ${userId ? 'AND user_id=?' : ''} ORDER BY created_at DESC LIMIT ?`)
+    .bind(...(userId ? [userId, limit] : [limit])).all<{ id: string; reference: string; amount_minor: number; age_min: number }>();
+  let approved = 0;
+  for (const p of rows.results ?? []) {
+    const r = await paystackVerify(env, p.reference).catch(() => null);
+    if (r?.status === 'success' && r.amount === p.amount_minor && r.currency === 'NGN') { await applyPaymentSuccess(env, p.id); approved += 1; }
+    else if ((r && ['failed', 'reversed'].includes(r.status)) || p.age_min > 30) await env.DB.prepare("UPDATE payments SET status='failed',review_note=? WHERE id=? AND status='pending'").bind('The Paystack payment was not completed.', p.id).run();
+  }
+  return approved;
+}
+
 type PaymentRow = { id: string; user_id: string; amount_minor: number; purpose: string | null; ref_id: string | null; status: string };
 
 /** Marks a payment successful and applies its effect (for example, a paid candidate form). Safe to call twice. */

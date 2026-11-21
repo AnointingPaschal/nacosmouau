@@ -6,9 +6,9 @@ import { api } from '../../lib/api';
 import { naira } from '../../lib/money';
 import { FileUpload } from '../../components/FileUpload';
 
-export interface DueRow { id: string; kind: 'nacos' | 'custom'; title: string; description: string | null; amount_minor: number; due_date: string | null; status: 'paid' | 'pending' | 'unpaid' | 'rejected'; payment: { id: string; method: string; review_note: string | null } | null }
-export interface PayInfo { session: string; level: string | null; dues_items: DueRow[]; dues_amount_minor: number; paystack: boolean; bank: { bank_name: string; account_name: string; account_number: string; configured: boolean }; dues: { status: 'paid' | 'pending' | 'unpaid' | 'rejected'; payment: Record<string, unknown> | null }; payments: Array<Record<string, unknown>> }
-export const usePayInfo = () => useQuery({ queryKey: ['portal', 'payments'], queryFn: ({ signal }) => api.get<PayInfo>('portal/payments', signal), retry: false });
+export interface DueRow { id: string; kind: 'nacos' | 'custom'; title: string; description: string | null; amount_minor: number; due_date: string | null; status: 'paid' | 'pending' | 'confirming' | 'unpaid' | 'rejected'; payment: { id: string; reference?: string; method: string; review_note: string | null } | null }
+export interface PayInfo { session: string; level: string | null; dues_items: DueRow[]; dues_amount_minor: number; paystack: boolean; bank: { bank_name: string; account_name: string; account_number: string; configured: boolean }; dues: { status: 'paid' | 'pending' | 'confirming' | 'unpaid' | 'rejected'; payment: Record<string, unknown> | null }; payments: Array<Record<string, unknown>> }
+export const usePayInfo = () => useQuery({ queryKey: ['portal', 'payments'], queryFn: ({ signal }) => api.get<PayInfo>('portal/payments', signal), retry: false, refetchInterval: q => (q.state.data?.dues_items?.some(d => d.status === 'confirming') ? 5000 : false) });
 
 function CopyButton({ value }: { value: string }) {
   return <button type="button" className="copy-btn" aria-label="Copy" onClick={() => { void navigator.clipboard?.writeText(value).then(() => toast.success('Copied')); }}><Copy size={14}/></button>;
