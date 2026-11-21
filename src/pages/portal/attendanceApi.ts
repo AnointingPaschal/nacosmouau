@@ -31,3 +31,14 @@ export function leftText(endIso: string | null, now: number) {
   const ms = new Date(endIso).getTime() - now; if (ms <= 0) return 'Closed';
   const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} left`;
 }
+
+export interface RecordSession { id: string; course_id: string; lecture_date: string; status: 'open' | 'closed'; started_at: string | null; code: string; title: string; verified: number; pending: number; by_rep: number }
+export interface RecordsState { session: string; level: string; role: 'rep' | 'assistant'; class_size: number; sessions: RecordSession[] }
+export interface RecordDetail {
+  session: OpenSession; started_by: string | null;
+  marks: { id: string; user_id: string; method: 'device' | 'rep'; status: 'pending' | 'verified' | 'rejected'; marked_at: string | null; distance_m: number | null; flags: string | null; full_name: string; matric_number: string | null }[];
+  roster: { id: string; full_name: string; matric_number: string | null }[];
+}
+export interface CourseMatrix { session: string; level: string; course: { code: string; title: string }; sessions: { id: string; lecture_date: string }[]; members: { id: string; full_name: string; matric_number: string | null; present: string[] }[] }
+export const shortDate = (iso: string) => { const [, m, d] = iso.split('-'); return `${d}/${m}`; };
+export const timeOf = (iso: string | null) => (iso ? new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(new Date(iso)) : '');

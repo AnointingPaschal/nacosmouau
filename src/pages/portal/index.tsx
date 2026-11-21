@@ -10,6 +10,7 @@ import { PortalClassElection } from './ClassElection';
 import { PortalRepDesk } from './RepDesk';
 import { PortalAttendance } from './Attendance';
 import { PortalAttendanceDesk } from './AttendanceDesk';
+import { PortalAttendanceRecords } from './AttendanceRecords';
 
 export { PortalHome as PortalOverview } from './Home';
 
@@ -22,6 +23,7 @@ export function PortalRouter() {
     case 'class-election': return <PortalClassElection/>;
     case 'rep-desk': return <PortalRepDesk/>;
     case 'attendance': return <PortalAttendance/>;
+    case 'attendance-records': return <PortalAttendanceRecords/>;
     case 'attendance-desk': return <PortalAttendanceDesk/>;
     case 'courses': return <PortalCourses/>;
     case 'results': return <PortalResults/>;

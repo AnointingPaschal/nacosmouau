@@ -1,25 +1,46 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BadgeCheck, Megaphone, Phone, Search, UsersRound } from 'lucide-react';
+import { BadgeCheck, FileDown, Megaphone, Phone, Search, UsersRound } from 'lucide-react';
+import { toast } from 'sonner';
+import { downloadLetterheadPdf } from '../../lib/pdf';
+import { useSettings } from '../../hooks/useApi';
 import { api } from '../../lib/api';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel } from '../../components/Workspace';
-import { REP_LABEL, initials, when, type MatesState } from './classApi';
+import { REP_LABEL, initials, useClassMe, when, type MatesState } from './classApi';
 
 export function PortalLevelMates() {
   const q = useQuery({ queryKey: ['portal', 'class', 'mates'], queryFn: ({ signal }) => api.get<MatesState>('portal/class/mates', signal), retry: false });
   const [search, setSearch] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { data: settings } = useSettings();
+  const me = useClassMe();
+  const isRep = (me.data?.roles.length ?? 0) > 0;
   const members = useMemo(() => (q.data?.members ?? []).filter(m => `${m.full_name} ${m.matric_number ?? ''}`.toLowerCase().includes(search.toLowerCase())), [q.data, search]);
   if (q.isLoading) return <LoadingState/>;
   if (q.error || !q.data) return <ErrorState error={q.error ?? new Error('Level mates unavailable')}/>;
   const { level, members: all, notices } = q.data;
   if (!level) return <><PageTitle eyebrow="CLASS" title="Level mates"/><EmptyState title="Your level is not set" text="Add your level in My membership so we can show the students in your class." icon={<UsersRound size={22}/>}/></>;
   const reps = all.filter(m => m.rep_role);
+  const classList = async () => {
+    setBusy(true);
+    try {
+      const rep = all.find(m => m.rep_role === 'rep'); const asst = all.find(m => m.rep_role === 'assistant');
+      await downloadLetterheadPdf({
+        title: `${level} level class list`, subtitle: `${q.data.session} academic session`, fileName: `class-list-${level}L-${q.data.session.replace('/', '-')}.pdf`,
+        details: [['Level', `${level} level`], ['Session', q.data.session], ['Students', String(all.length)], ['Course Rep', rep?.full_name ?? 'Not elected'], ['Assistant Rep', asst?.full_name ?? 'Not elected']],
+        head: ['S/N', 'Name', 'Matric number', 'Phone', 'Signature'], columnWidths: [12, 62, 40, 32, 36],
+        body: all.map((m, i) => [i + 1, m.rep_role ? `${m.full_name} (${m.rep_role === 'rep' ? 'Course Rep' : 'Asst. Rep'})` : m.full_name, m.matric_number ?? '', m.phone ?? '', '']),
+        signatures: ['Course Rep', 'Assistant Course Rep'],
+      }, settings);
+      toast.success('Class list downloaded');
+    } catch { toast.error('Could not create the class list'); } finally { setBusy(false); }
+  };
   const rest = members.filter(m => !m.rep_role);
 
   return <>
-    <PageTitle eyebrow="CLASS" title={`${level} level mates`} description={`${all.length} active member${all.length === 1 ? '' : 's'} in your class for ${q.data.session}.`}/>
+    <PageTitle eyebrow="CLASS" title={`${level} level mates`} description={`${all.length} active member${all.length === 1 ? '' : 's'} in your class for ${q.data.session}.`} action={isRep ? <button className="button button-green btn-sm" disabled={busy} onClick={() => void classList()}><FileDown size={14}/> {busy ? 'Preparing…' : 'Class list PDF'}</button> : undefined}/>
     <div className="lm-reps">{(['rep', 'assistant'] as const).map(role => { const m = reps.find(r => r.rep_role === role); return <div key={role} className={`lm-rep${m ? '' : ' empty'}`}>
       <span className="lm-badge"><BadgeCheck size={14}/> {REP_LABEL[role]}</span>
       {m ? <><b>{m.full_name}</b><small>{m.matric_number}</small>{m.phone && <a href={`tel:${m.phone}`}><Phone size={12}/> {m.phone}</a>}</> : <><b>Not elected</b><small><Link to="/portal/class-election">Class election</Link></small></>}

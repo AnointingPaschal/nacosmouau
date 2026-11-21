@@ -185,6 +185,36 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       await env.DB.prepare('DELETE FROM class_timetable WHERE id=? AND level=?').bind(b, role.level).run();
       return json({ ok: true });
     }
+    if (a === 'records' && !b && method === 'GET') {
+      const { session, role } = await repContext(env, user); if (!role) return fail('Only your class rep and assistant can see attendance records.', 403);
+      await closeDueSessions(env);
+      const rows = await env.DB.prepare("SELECT s.id,s.course_id,s.lecture_date,s.status,s.started_at,c.code,c.title,(SELECT COUNT(*) FROM attendance_marks m WHERE m.session_id=s.id AND m.status='verified') AS verified,(SELECT COUNT(*) FROM attendance_marks m WHERE m.session_id=s.id AND m.status='pending') AS pending,(SELECT COUNT(*) FROM attendance_marks m WHERE m.session_id=s.id AND m.method='rep') AS by_rep FROM attendance_sessions s JOIN course_catalogue c ON c.id=s.course_id WHERE s.level=? AND s.session=? ORDER BY s.started_at DESC").bind(role.level, session).all<{ started_at: string }>();
+      const total = await env.DB.prepare("SELECT COUNT(*) n FROM users WHERE academic_level=? AND status='active'").bind(role.level).first<{ n: number }>();
+      return json({ session, level: role.level, role: role.role, class_size: total?.n ?? 0, sessions: (rows.results ?? []).map(r => ({ ...r, started_at: iso(r.started_at) })) });
+    }
+    if (a === 'records' && b === 'course' && c && method === 'GET') {
+      const { session, role } = await repContext(env, user); if (!role) return fail('Only your class rep and assistant can see attendance records.', 403);
+      const [course, sessions, marks, members] = await Promise.all([
+        env.DB.prepare('SELECT code,title FROM course_catalogue WHERE id=? AND level=?').bind(c, role.level).first<{ code: string; title: string }>(),
+        env.DB.prepare('SELECT id,lecture_date FROM attendance_sessions WHERE level=? AND session=? AND course_id=? ORDER BY lecture_date,started_at').bind(role.level, session, c).all<{ id: string; lecture_date: string }>(),
+        env.DB.prepare("SELECT m.session_id,m.user_id FROM attendance_marks m JOIN attendance_sessions s ON s.id=m.session_id WHERE s.level=? AND s.session=? AND s.course_id=? AND m.status='verified'").bind(role.level, session, c).all<{ session_id: string; user_id: string }>(),
+        env.DB.prepare("SELECT id,full_name,matric_number FROM users WHERE academic_level=? AND status='active' ORDER BY full_name COLLATE NOCASE").bind(role.level).all<{ id: string; full_name: string; matric_number: string | null }>(),
+      ]);
+      if (!course) return fail('Course not found.', 404);
+      const present = new Map<string, Set<string>>();
+      for (const m of marks.results ?? []) { if (!present.has(m.user_id)) present.set(m.user_id, new Set()); present.get(m.user_id)!.add(m.session_id); }
+      return json({ session, level: role.level, course, sessions: sessions.results ?? [], members: (members.results ?? []).map(m => ({ ...m, present: [...(present.get(m.id) ?? [])] })) });
+    }
+    if (a === 'records' && b && method === 'GET') {
+      const f = await ownedSession(env, user, b); if ('error' in f) return f.error;
+      const [course, marks, members, starter] = await Promise.all([
+        env.DB.prepare('SELECT code,title FROM course_catalogue WHERE id=?').bind(f.row.course_id).first<{ code: string; title: string }>(),
+        env.DB.prepare('SELECT m.id,m.user_id,m.method,m.status,m.marked_at,m.distance_m,m.flags,u.full_name,u.matric_number FROM attendance_marks m JOIN users u ON u.id=m.user_id WHERE m.session_id=? ORDER BY u.full_name COLLATE NOCASE').bind(b).all<{ marked_at: string }>(),
+        env.DB.prepare("SELECT id,full_name,matric_number FROM users WHERE academic_level=? AND status='active' ORDER BY full_name COLLATE NOCASE").bind(f.row.level).all(),
+        env.DB.prepare('SELECT full_name FROM users WHERE id=?').bind(f.row.started_by).first<{ full_name: string }>(),
+      ]);
+      return json({ session: publicSession({ ...f.row, ...course } as SessionRow & { code?: string; title?: string }), started_by: starter?.full_name ?? null, marks: (marks.results ?? []).map(m => ({ ...m, marked_at: iso(m.marked_at) })), roster: members.results ?? [] });
+    }
     if (a === 'report' && method === 'GET') {
       const { session, role } = await repContext(env, user); if (!role) return fail('Only your class rep and assistant can see the report.', 403);
       const [totals, counts, members] = await Promise.all([

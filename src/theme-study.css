@@ -338,3 +338,4 @@
   .att-history li { grid-template-columns: 1fr auto; } .att-history .att-bar { grid-column: 1 / -1; grid-row: 2; }
   .att-recent button { grid-template-columns: auto 1fr; } .att-recent em { grid-column: 1 / -1; }
 }
+.att-chips { display: flex; flex-wrap: wrap; gap: 8px; } .att-chips button { display: grid; gap: 1px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; color: var(--ink); transition: border-color .25s, transform .3s var(--ease); } .att-chips button:hover { border-color: var(--brand); transform: translateY(-2px); } .att-chips b { font-size: 14px; } .att-chips span { font-size: 11.5px; color: var(--subtle); }
