@@ -1,29 +1,26 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CheckCircle2, Clock, Loader2, MapPin, ShieldCheck, Smartphone } from 'lucide-react';
 import { api } from '../../lib/api';
-import { currentPosition, deviceCheck } from '../../lib/device';
+import { deviceCheck, softPosition } from '../../lib/device';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel, Pill } from '../../components/Workspace';
 import { REQUIRED_PCT, leftText, pct, useNow, type StudentAttendance } from './attendanceApi';
 
 export function PortalAttendance() {
   const client = useQueryClient();
-  const [params] = useSearchParams();
-  const [code, setCode] = useState(() => (params.get('c') ?? '').replace(/\D/g, '').slice(0, 6));
   const [step, setStep] = useState('');
   const now = useNow();
   const q = useQuery({ queryKey: ['portal', 'attendance', 'open'], queryFn: ({ signal }) => api.get<StudentAttendance>('portal/attendance/open', signal), retry: false, refetchInterval: 10_000 });
   const mark = useMutation({
     mutationFn: async () => {
       setStep('Checking your phone…'); const device = await deviceCheck();
-      setStep('Finding your location…'); const pos = await currentPosition();
+      setStep('Checking your location…'); const pos = await softPosition();
       setStep('Marking you present…');
-      return api.post<{ status: 'pending' | 'verified'; neighbours: number; needed: number }>('portal/attendance/mark', { code, ...pos, ...device });
+      return api.post<{ status: 'pending' | 'verified'; flags: string | null }>('portal/attendance/mark', { ...(pos ?? {}), ...device });
     },
-    onSuccess: async (r) => { setStep(''); toast.success(r.status === 'verified' ? 'You are marked present' : 'Attendance recorded and waiting for verification'); await client.invalidateQueries({ queryKey: ['portal', 'attendance'] }); },
+    onSuccess: async (r) => { setStep(''); toast.success(r.status === 'verified' ? 'You are marked present' : 'Attendance recorded. Your rep will review it.'); await client.invalidateQueries({ queryKey: ['portal', 'attendance'] }); },
     onError: e => { setStep(''); toast.error(e instanceof Error ? e.message : 'Could not mark attendance'); },
   });
 
@@ -39,21 +36,20 @@ export function PortalAttendance() {
       {mine ? <div className={`att-result ${mine.status}`}>
         {mine.status === 'verified' ? <CheckCircle2 size={22}/> : <Loader2 size={22}/>}
         <div><b>{mine.method === 'rep' ? 'Marked present by your class rep' : mine.status === 'verified' ? 'You are marked present' : mine.status === 'rejected' ? 'Your mark was rejected' : 'Recorded, waiting for verification'}</b>
-          {mine.method === 'device' && mine.status === 'pending' && <small>{mine.neighbours} of {open.min_peers} classmates nearby so far. Your rep can also approve it.</small>}
-          {mine.flags && <small>Flagged for your rep to review.</small>}</div>
+          {mine.method === 'device' && mine.status === 'pending' && <small>Your rep will review this mark.</small>}
+          {mine.flags && <small>{mine.flags.includes('far_from_rep') ? 'Your location looked far from the lecture hall.' : 'Flagged for review.'}</small>}</div>
         <Pill value={mine.status}/>
       </div> : <form className="att-form" onSubmit={e => { e.preventDefault(); mark.mutate(); }}>
-        <label className="field"><span>Code on the screen</span><input className="att-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} placeholder="000000" required/></label>
-        <button className="button button-green" disabled={mark.isPending || code.length !== 6}>{mark.isPending ? step || 'Working…' : 'Mark me present'}</button>
-        <p className="field-hint">Your phone will ask to share its location. The code changes every 30 seconds, so type the one you see now.</p>
+        <button className="button button-green" disabled={mark.isPending}>{mark.isPending ? step || 'Working…' : 'Mark me present'}</button>
+        <p className="field-hint">Only mark yourself while you are in the lecture. Your phone and browser are recorded with your mark, and your rep can see anything that looks off.</p>
       </form>}
     </Panel> : <EmptyState title="No attendance open" text="When your class rep opens a lecture, it appears here. Check back during the lecture." icon={<Clock size={22}/>}/>}
 
     {rules && <Panel title="How attendance is checked"><ul className="att-rules">
-      <li><MapPin size={16}/><span>You must be within <b>{rules.radius_m} m</b> of your class rep.</span></li>
+      <li><Clock size={16}/><span>Attendance is open for <b>{rules.window_minutes} minutes</b> after your rep starts it. After that you cannot mark.</span></li>
       <li><Smartphone size={16}/><span>One phone can mark one student. Your phone and browser are recorded with your mark.</span></li>
-      <li><ShieldCheck size={16}/><span>A mark is verified once <b>{rules.min_peers}</b> classmates are nearby. Otherwise your rep reviews it.</span></li>
-      <li><Clock size={16}/><span>The window lasts <b>{rules.window_minutes} minutes</b>. No smartphone? Your rep can sign and mark you.</span></li>
+      <li><MapPin size={16}/><span>If you share your location and it is far from your rep, the mark waits for your rep to review it.</span></li>
+      <li><ShieldCheck size={16}/><span>No smartphone? Your rep can sign and mark you present.</span></li>
     </ul></Panel>}
 
     <Panel title="My attendance this session">

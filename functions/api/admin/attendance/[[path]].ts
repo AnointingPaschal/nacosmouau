@@ -16,7 +16,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
     }
     if (method === 'PUT') {
       const body = await readBody(request); if (!body) return fail('Invalid request.');
-      const w = Number(body.window_minutes); const r = Number(body.radius_m); const p = Number(body.min_peers);
+      const w = Number(body.window_minutes); const r = Number(body.radius_m); const p = body.min_peers === undefined ? 0 : Number(body.min_peers);
       if (!Number.isInteger(w) || w < 1 || w > WINDOW_MAX_MIN) return fail(`The attendance window must be between 1 and ${WINDOW_MAX_MIN} minutes.`);
       if (!Number.isInteger(r) || r < 30 || r > 300) return fail('The distance limit must be between 30 and 300 metres.');
       if (!Number.isInteger(p) || p < 0 || p > 40) return fail('Nearby classmates must be between 0 and 40.');

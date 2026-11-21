@@ -1,7 +1,7 @@
 import { Env, currentUser } from '../../auth/_shared';
 import { currentSession, fail, json, pathOf, randomId, readBody, text } from '../../_portal';
 import { LEVELS, iso, repRoles } from '../../_class';
-import { closeDueSessions, codeFor, codeIsValid, distanceMeters, lagosNow, newSecret, recomputePeers, rules, stepNow, stepSecondsLeft } from '../../_attendance';
+import { closeDueSessions, distanceMeters, lagosNow, newSecret, rules } from '../../_attendance';
 
 type Me = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 interface SessionRow { id: string; level: string; session: string; course_id: string; lecture_date: string; started_by: string; started_at: string; closes_at: string; closed_at: string | null; status: string; secret: string; rep_lat: number | null; rep_lng: number | null; rep_accuracy: number | null; radius_m: number; min_peers: number }
@@ -32,15 +32,11 @@ async function mark(request: Request, env: Env, user: Me) {
   const open = await openSession(env, level, session);
   if (!open) return fail('No attendance is open for your level right now.', 409);
   const body = await readBody(request); if (!body) return fail('Invalid request.');
-  const code = text(body.code, 6);
-  if (!/^\d{6}$/.test(code) || !(await codeIsValid(open.secret, code))) return fail('That code is wrong or has expired. Look at the screen again for the new code.', 403);
   if (await env.DB.prepare('SELECT 1 FROM attendance_marks WHERE session_id=? AND user_id=?').bind(open.id, user.id).first()) return fail('You have already marked attendance for this lecture.', 409);
+  // Location is a soft signal: it never blocks a mark, but a precise location far from the rep is flagged for review.
   const lat = num(body.lat); const lng = num(body.lng); const accuracy = num(body.accuracy);
-  if (lat === null || lng === null || accuracy === null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return fail('Location is required. Allow location access and try again.', 400);
-  if (accuracy > 150) return fail(`Your location is too rough (about ${Math.round(accuracy)} m). Turn on precise location, step outside the hall door for a moment, and try again.`, 400);
-  if (open.rep_lat === null || open.rep_lng === null) return fail('The rep location is not available yet. Ask your rep to refresh the attendance screen.', 409);
-  const distance = distanceMeters(lat, lng, open.rep_lat, open.rep_lng);
-  if (distance > open.radius_m) return fail(`You are about ${Math.round(distance)} m from your class rep. You must be within ${open.radius_m} m to mark attendance.`, 403);
+  const located = lat !== null && lng !== null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && accuracy !== null && accuracy <= 150;
+  const distance = located && open.rep_lat !== null && open.rep_lng !== null ? distanceMeters(lat!, lng!, open.rep_lat, open.rep_lng) : null;
   const deviceId = text(body.device_id, 64); const fingerprint = text(body.fingerprint, 128);
   if (deviceId.length < 16 || fingerprint.length < 32) return fail('Your device could not be checked. Reload the page and try again.', 400);
   const cookies = request.headers.get('Cookie') ?? ''; const cookieId = cookies.split(';').map(v => v.trim()).find(v => v.startsWith('nacos_did='))?.slice(10) || randomId();
@@ -48,13 +44,13 @@ async function mark(request: Request, env: Env, user: Me) {
   if (clash) return json({ error: 'This phone has already been used to mark attendance for another student. One phone can mark for one student only.' }, 409, { 'Set-Cookie': `nacos_did=${cookieId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=31536000` });
   const flags: string[] = [];
   if (await env.DB.prepare("SELECT 1 FROM attendance_marks WHERE session_id=? AND user_id!=? AND method='device' AND status!='rejected' AND fingerprint=? LIMIT 1").bind(open.id, user.id, fingerprint).first()) flags.push('same_fingerprint');
+  if (distance !== null && distance > open.radius_m) flags.push('far_from_rep');
+  const status = flags.length ? 'pending' : 'verified';
   const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For') ?? null;
   const summary = JSON.stringify(body.summary && typeof body.summary === 'object' ? body.summary : {}).slice(0, 1200);
-  await env.DB.prepare("INSERT INTO attendance_marks(id,session_id,user_id,method,status,lat,lng,accuracy,distance_m,device_id,cookie_id,fingerprint,ip,user_agent,device_summary,flags) VALUES(?,?,?,'device','pending',?,?,?,?,?,?,?,?,?,?,?)")
-    .bind(randomId(), open.id, user.id, lat, lng, accuracy, Math.round(distance), deviceId, cookieId, fingerprint, ip, (request.headers.get('User-Agent') ?? '').slice(0, 300), summary, flags.join(',') || null).run();
-  await recomputePeers(env, open.id, open.radius_m, open.min_peers);
-  const result = await env.DB.prepare('SELECT status,neighbours,flags FROM attendance_marks WHERE session_id=? AND user_id=?').bind(open.id, user.id).first<{ status: string; neighbours: number; flags: string | null }>();
-  return json({ ok: true, ...result, needed: open.min_peers }, 201, { 'Set-Cookie': `nacos_did=${cookieId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=31536000` });
+  await env.DB.prepare("INSERT INTO attendance_marks(id,session_id,user_id,method,status,lat,lng,accuracy,distance_m,device_id,cookie_id,fingerprint,ip,user_agent,device_summary,flags) VALUES(?,?,?,'device',?,?,?,?,?,?,?,?,?,?,?,?)")
+    .bind(randomId(), open.id, user.id, status, located ? lat : null, located ? lng : null, located ? accuracy : null, distance === null ? null : Math.round(distance), deviceId, cookieId, fingerprint, ip, (request.headers.get('User-Agent') ?? '').slice(0, 300), summary, flags.join(',') || null).run();
+  return json({ ok: true, status, flags: flags.join(',') || null }, 201, { 'Set-Cookie': `nacos_did=${cookieId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=31536000` });
 }
 
 async function repContext(env: Env, user: Me) {
@@ -86,9 +82,9 @@ async function startSession(request: Request, env: Env, user: Me) {
   await closeDueSessions(env);
   if (await openSession(env, role.level, session)) return fail('Attendance is already open for your level.', 409);
   const body = await readBody(request); if (!body) return fail('Invalid request.');
-  const lat = num(body.lat); const lng = num(body.lng); const accuracy = num(body.accuracy);
-  if (lat === null || lng === null) return fail('Allow location access so students can be checked against where you are.', 400);
-  if ((accuracy ?? 0) > 150) return fail('Your location is too rough. Turn on precise location and try again.', 400);
+  const rawLat = num(body.lat); const rawLng = num(body.lng); const rawAcc = num(body.accuracy);
+  const ok = rawLat !== null && rawLng !== null && (rawAcc ?? 0) <= 150;
+  const lat = ok ? rawLat : null; const lng = ok ? rawLng : null; const accuracy = ok ? rawAcc : null;
   const { day, minutes, date } = lagosNow();
   let courseId = text(body.course_id, 64);
   if (!courseId) {
@@ -119,8 +115,7 @@ async function live(env: Env, user: Me, id: string) {
     env.DB.prepare('SELECT code,title FROM course_catalogue WHERE id=?').bind(s.course_id).first<{ code: string; title: string }>(),
     env.DB.prepare('SELECT m.id,m.user_id,m.method,m.status,m.distance_m,m.neighbours,m.flags,m.marked_at,m.ip,m.review_note,u.full_name,u.matric_number FROM attendance_marks m JOIN users u ON u.id=m.user_id WHERE m.session_id=? ORDER BY m.marked_at DESC').bind(id).all<{ marked_at: string }>(),
   ]);
-  const open = s.status === 'open';
-  return json({ session: publicSession({ ...s, ...course } as SessionRow & { code?: string; title?: string }), code: open ? await codeFor(s.secret, stepNow()) : null, seconds_left: stepSecondsLeft(), marks: (marks.results ?? []).map(m => ({ ...m, marked_at: iso(m.marked_at) })) });
+  return json({ session: publicSession({ ...s, ...course } as SessionRow & { code?: string; title?: string }), code: null, seconds_left: 0, marks: (marks.results ?? []).map(m => ({ ...m, marked_at: iso(m.marked_at) })) });
 }
 
 export const onRequest: PagesFunction<Env> = async ({ request, env, params }) => {

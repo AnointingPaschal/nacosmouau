@@ -47,13 +47,18 @@ export async function deviceCheck(): Promise<DeviceCheck> {
 
 export interface Position { lat: number; lng: number; accuracy: number }
 
-export function currentPosition(): Promise<Position> {
+export function currentPosition(timeout = 20_000): Promise<Position> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) { reject(new Error('This browser cannot share your location.')); return; }
     navigator.geolocation.getCurrentPosition(
       p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
       e => reject(new Error(e.code === e.PERMISSION_DENIED ? 'Location is blocked. Allow location for this site in your browser settings, then try again.' : e.code === e.TIMEOUT ? 'Your phone took too long to find your location. Go near a window or outdoors and try again.' : 'Could not read your location. Turn on GPS and try again.')),
-      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
+      { enableHighAccuracy: true, timeout, maximumAge: 30_000 },
     );
   });
+}
+
+/** Location is an extra signal only. If it is blocked, slow or rough, attendance carries on without it. */
+export async function softPosition(timeout = 8000): Promise<Position | null> {
+  try { const p = await currentPosition(timeout); return p.accuracy <= 150 ? p : null; } catch { return null; }
 }
