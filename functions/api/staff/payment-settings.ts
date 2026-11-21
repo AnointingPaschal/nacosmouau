@@ -1,4 +1,5 @@
 import { Env, currentUser, hasPermission, verifyPassword } from '../auth/_shared';
+import { storedPaystackKey } from '../_secure';
 import { LEVELS, audit, bankDetails, currentSession, duesSchedule, fail, json, readBody, setting } from '../_portal';
 
 async function allowed(env: Env, user: { id: string; role: string }, action: 'read' | 'update') {
@@ -13,7 +14,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   return json({
     session, dues_by_level: schedule, dues_explicit: LEVELS.filter(l => Number(explicit?.[l]) > 0),
     bank_name: bank.bank_name, bank_account_name: bank.account_name, bank_account_number: bank.account_number,
-    paystack_public_key: publicKey, paystack_secret_configured: Boolean(env.PAYSTACK_SECRET_KEY),
+    paystack_public_key: publicKey, paystack_secret_configured: Boolean(env.PAYSTACK_SECRET_KEY || await storedPaystackKey(env)),
     caller_is_super_admin: user.role === 'super_admin',
   });
 };

@@ -6,6 +6,7 @@ import { api } from '../../lib/api';
 import { fromKobo, toKobo } from '../../lib/money';
 import { ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel } from '../../components/Workspace';
+import { PaystackKeyPanel } from './PaystackKeyPanel';
 
 const LEVELS = ['100', '200', '300', '400'];
 interface Data {
@@ -63,8 +64,7 @@ export function AdminPaymentSettings() {
       </Panel>
       <Panel title="Paystack">
         <label className="field"><span>Public key</span><input value={key} onChange={e => setKey(e.target.value)} placeholder="pk_test_…" autoComplete="off" spellCheck={false}/></label>
-        <div className="detail-list"><div><dt>Secret key</dt><dd>{d.paystack_secret_configured ? <span className="pill pill-ok">Configured</span> : <span className="pill pill-wait">Not set</span>}</dd></div></div>
-        <p className="field-hint">The secret key is never stored here. Add it as the <b>PAYSTACK_SECRET_KEY</b> secret in your Cloudflare Pages settings. Members can pay with Paystack only when it is set.</p>
+        <p className="field-hint">The secret key is saved separately below, with your password and Google 2FA.</p>
       </Panel>
       <Panel title="Confirm with a super administrator">
         <p className="field-hint"><ShieldCheck size={14}/> {d.caller_is_super_admin ? 'Enter your password to save these changes.' : 'Enter the email and password of a super administrator to save these changes.'}</p>
@@ -78,5 +78,6 @@ export function AdminPaymentSettings() {
         <span className="field-hint"><Wallet size={14}/> <Landmark size={14}/> Changes are recorded in the audit log.</span>
       </div>
     </form>
+    <PaystackKeyPanel/>
   </>;
 }

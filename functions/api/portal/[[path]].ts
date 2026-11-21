@@ -1,4 +1,5 @@
 import { Env, currentUser, passwordHash, verifyPassword } from '../auth/_shared';
+import { withStoredPaystackKey } from '../_secure';
 import { applyPaymentSuccess, audit, tally, bankDetails, currentSession, duesAmountForUser, duesPaid, ensureMembership, fail, fileKey, json, pathOf, paystackInitialize, paystackReady, paystackVerify, randomId, readBody, text } from '../_portal';
 
 type Me = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
@@ -209,7 +210,8 @@ async function vote(request: Request, env: Env, user: Me, id: string) {
   return json({ ok: true, message: 'Your vote has been recorded. Thank you for voting.' }, 201);
 }
 
-export const onRequest: PagesFunction<Env> = async ({ request, env, params }) => {
+export const onRequest: PagesFunction<Env> = async ({ request, env: baseEnv, params }) => {
+  const env = await withStoredPaystackKey(baseEnv);
   const user = await currentUser(request, env).catch(() => null);
   if (!user || user.status !== 'active') return fail('Sign in with an active member account to continue.', 401);
   const path = pathOf(params as Record<string, string | string[]>); const [a, b, c] = path; const method = request.method;
