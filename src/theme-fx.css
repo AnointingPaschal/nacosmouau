@@ -301,3 +301,57 @@ html[data-scrolled] .site-header { box-shadow: 0 14px 40px -18px #07210f55; }
 .event-detail-image, .article-hero { height: min(56vw, 460px); }
 .lightbox img { object-fit: contain; }
 .rp-face img, .cand-thumb img, .ev-speaker img { object-position: center top; }
+
+/* Passports: frames match the photo shape, photos fill them and keep faces in view */
+.executive-photo { aspect-ratio: 4 / 5; }
+.idc-photo img, .cand-photo img, .exec-portrait img, .executive-photo img, .president-portrait img { object-fit: cover; object-position: center top; background: transparent; }
+.executive-photo, .exec-portrait, .president-portrait { background-color: #0d3d27; }
+.executive-photo { background: linear-gradient(165deg, #0f5a38, #06251a); }
+.executive-photo img { animation: fx-kb 16s ease-in-out infinite alternate; transform-origin: 50% 25%; }
+.executive-card:nth-child(2n) .executive-photo img { animation-delay: -6s; } .executive-card:nth-child(3n) .executive-photo img { animation-delay: -11s; }
+.executive-photo::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(105deg, transparent 35%, #ffffff55 50%, transparent 65%); transform: translateX(-130%); transition: transform .9s var(--ease); }
+.executive-card:hover .executive-photo::before { transform: translateX(130%); }
+.executive-photo::after { background: linear-gradient(0deg, #04301d99, transparent 45%); }
+.executive-card::before { content: ''; position: absolute; inset: -1px; z-index: 0; border-radius: inherit; padding: 2px; pointer-events: none; opacity: 0; transition: opacity .5s; background: conic-gradient(from var(--fx-a), var(--brand-bright), transparent 30%, var(--brand) 55%, transparent 80%, var(--brand-bright)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); animation: fx-rot 5s linear infinite; }
+.executive-card:hover::before { opacity: 1; }
+.executive-card > * { position: relative; z-index: 1; } .executive-card > .text-action { position: absolute; }
+
+.president-portrait { height: auto; width: 100%; aspect-ratio: 4 / 5; border-radius: 22px; animation: fx-rot 7s linear infinite, fx-bob 6s ease-in-out infinite, fx-glow 4s ease-in-out infinite; }
+.president-portrait img { border-radius: 19px; animation: fx-kb 18s ease-in-out infinite alternate; transform-origin: 50% 20%; }
+.president-portrait::after { content: ''; position: absolute; inset: 3px; z-index: 1; border-radius: 19px; pointer-events: none; background: linear-gradient(105deg, transparent 38%, #ffffff30 50%, transparent 62%); transform: translateX(-130%); animation: fx-sweep 9s ease-in-out 1.5s infinite; }
+.president-portrait { position: relative; }
+@media (max-width: 560px) { .president-portrait { max-width: 240px; } }
+
+@keyframes fx-kb { from { scale: 1; } to { scale: 1.07; } }
+@keyframes fx-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+@keyframes fx-glow { 0%, 100% { box-shadow: 0 24px 60px -26px #2ee59a55; } 50% { box-shadow: 0 30px 80px -20px #2ee59aaa; } }
+
+/* Footer */
+.institution-footer { padding-top: 64px; background: radial-gradient(50% 60% at 0% 0%, #0a8a5233, transparent 70%), radial-gradient(40% 50% at 100% 100%, #2ee59a1c, transparent 70%), linear-gradient(180deg, #05100a, #020504); }
+.institution-footer::after { content: 'NACOS MOUAU'; position: absolute; left: 50%; bottom: -.18em; translate: -50% 0; z-index: 0; font: 900 clamp(64px, 19vw, 230px)/1 var(--font-display); letter-spacing: -.04em; white-space: nowrap; color: transparent; -webkit-text-stroke: 1px #ffffff12; pointer-events: none; user-select: none; }
+.institution-footer > * { position: relative; z-index: 1; }
+.footer-brand .brand { width: fit-content; padding: 10px 16px; border-radius: 18px; background: #ffffff0d; border: 1px solid #ffffff1c; backdrop-filter: blur(10px); transition: border-color .3s, transform .4s var(--ease); }
+.footer-brand .brand:hover { border-color: var(--brand-bright); transform: translateY(-3px); }
+.footer-brand > p { font-size: 14px; color: #b9c9bf; max-width: 300px; }
+.footer-main h3 { display: flex; align-items: center; gap: 10px; margin: 6px 0 18px; font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: #fff; }
+.footer-main h3::before { content: ''; width: 18px; height: 2px; background: var(--brand-bright); border-radius: 2px; }
+.footer-nav { gap: 4px; }
+.footer-nav a, .footer-contact a { position: relative; width: fit-content; padding: 6px 0 6px 0; font-size: 14px; color: #b9c9bf; transition: color .25s, padding-left .35s var(--ease); }
+.footer-nav a::before { content: ''; position: absolute; left: 0; top: 50%; width: 0; height: 2px; background: var(--brand-bright); transition: width .35s var(--ease); }
+.footer-nav a:hover { color: #fff; padding-left: 20px; transform: none; } .footer-nav a:hover::before { width: 12px; }
+.footer-contact > p, .footer-contact > a { align-items: center; font-size: 14px; color: #b9c9bf; }
+.footer-contact svg { box-sizing: content-box; width: 16px; height: 16px; padding: 8px; border-radius: 12px; background: #2ee59a1f; color: var(--brand-bright); }
+.footer-contact .footer-address { padding: 14px 0 0; font-size: 13px; color: #8ea398; }
+.social-links { gap: 8px; }
+.social-links a { padding: 8px 14px; border-radius: 99px; border: 1px solid #ffffff22; font-size: 13px; color: #dfeae3; transition: background .3s, border-color .3s, transform .35s var(--ease); }
+.social-links a:hover { background: var(--brand); border-color: var(--brand); color: #fff; transform: translateY(-3px); }
+.constitution-link { margin-top: 14px; padding: 9px 14px; border-radius: 12px; background: #2ee59a1a; width: fit-content; font-size: 13px; font-weight: 700; color: var(--brand-bright); transition: background .3s; }
+.constitution-link:hover { background: #2ee59a33; }
+.footer-legal { height: auto; min-height: 56px; padding: 16px 0 18px; gap: 8px 20px; flex-wrap: wrap; font-size: 12px; color: #8ea398; }
+@media (max-width: 820px) {
+  .institution-footer { padding-top: 44px; }
+  .footer-main { grid-template-columns: 1fr 1fr; gap: 30px 18px; }
+  .footer-brand, .footer-contact { grid-column: 1 / -1; }
+  .footer-legal { flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { .executive-photo img, .president-portrait, .president-portrait img, .president-portrait::after, .executive-card::before { animation: none !important; } }
