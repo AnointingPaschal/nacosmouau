@@ -27,6 +27,11 @@ async function register(request: Request, env: Env, user: Me) {
   if (!ids.length) return fail('Choose at least one course.');
   const session = text(body.session, 9) || await currentSession(env);
   if (!validSession(session)) return fail('Enter the session like 2025/2026.');
+  const levelsPicked = await env.DB.prepare(`SELECT DISTINCT level FROM course_catalogue WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all<{ level: string }>();
+  const pickedLevels = (levelsPicked.results ?? []).map(r => r.level);
+  const sessionLevel = await env.DB.prepare('SELECT level FROM member_courses WHERE user_id=? AND session=? LIMIT 1').bind(user.id, session).first<{ level: string }>();
+  if (pickedLevels.length > 1) return fail('Register courses from one level at a time. A session can only have one level.', 409);
+  if (sessionLevel && pickedLevels.length && pickedLevels[0] !== sessionLevel.level) return fail(`You already registered ${sessionLevel.level} level courses for ${session}. A session can only have one level. Remove them first to change level.`, 409);
   const added: string[] = []; const skipped: string[] = [];
   const picked = await env.DB.prepare(`SELECT COALESCE(SUM(units),0) n FROM course_catalogue WHERE is_active=1 AND (owner_user_id IS NULL OR owner_user_id=?) AND id IN (${ids.map(() => '?').join(',')}) AND id NOT IN (SELECT course_id FROM member_courses WHERE user_id=? AND session=?)`).bind(user.id, ...ids, user.id, session).first<{ n: number }>();
   const held = await env.DB.prepare('SELECT COALESCE(SUM(c.units),0) n FROM member_courses m JOIN course_catalogue c ON c.id=m.course_id WHERE m.user_id=? AND m.session=?').bind(user.id, session).first<{ n: number }>();

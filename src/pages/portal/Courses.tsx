@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { BookOpen, Check, Plus, Search, Trash2 } from 'lucide-react';
+import { BookOpen, Plus, Search, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel } from '../../components/Workspace';
@@ -44,9 +44,16 @@ export function PortalCourses() {
   const [adding, setAdding] = useState(false);
   const [doomed, setDoomed] = useState<Set<string>>(new Set());
 
-  const level = levelPick ?? q.data?.level ?? '100';
   const activeSession = session ?? q.data?.session ?? '';
   const sessionRecords = useMemo(() => (q.data?.records ?? []).filter(r => r.session === activeSession), [q.data, activeSession]);
+  // A session belongs to one level: use the level already registered, otherwise work it out from the member's level.
+  const lockedLevel = sessionRecords[0]?.level ?? null;
+  const impliedLevel = (() => {
+    const own = Number(q.data?.level); const now = Number(q.data?.session.split('/')[0]); const then = Number(activeSession.split('/')[0]);
+    if (!own || !now || !then) return q.data?.level ?? '100';
+    return String(Math.min(400, Math.max(100, own - 100 * (now - then))));
+  })();
+  const level = lockedLevel ?? levelPick ?? impliedLevel;
   const registeredIds = useMemo(() => new Set(sessionRecords.map(r => r.course_id)), [sessionRecords]);
   const heldUnits = sessionRecords.reduce((sum, r) => sum + r.units, 0);
   const byId = useMemo(() => new Map((q.data?.catalogue ?? []).map(c => [c.id, c])), [q.data]);
@@ -94,9 +101,10 @@ export function PortalCourses() {
   return <>
     <PageTitle eyebrow="ACADEMICS" title="Course registration" description={`Choose your level, then tick the courses for both semesters. You can register up to ${MAX_UNITS} credit units in a session.`}/>
     <div className="study-bar">
-      <div className="study-tabs" role="tablist" aria-label="Level">{LEVELS.map(l => <button key={l} role="tab" aria-selected={level === l} className={level === l ? 'active' : ''} onClick={() => { setLevelPick(l); setSelected(new Set()); }}>{l}L{q.data.level === l && <i>You</i>}</button>)}</div>
-      <label className="study-session"><span>Session</span><select value={activeSession} onChange={e => { setSession(e.target.value); setSelected(new Set()); }}>{sessions.map(s => <option key={s} value={s}>{s}{s === q.data.session ? ' (current)' : ''}</option>)}</select></label>
+      <div className="study-tabs" role="tablist" aria-label="Level">{LEVELS.map(l => <button key={l} role="tab" aria-selected={level === l} disabled={Boolean(lockedLevel) && l !== lockedLevel} className={level === l ? 'active' : ''} onClick={() => { setLevelPick(l); setSelected(new Set()); }}>{l}L{q.data.level === l && <i>You</i>}</button>)}</div>
+      <label className="study-session"><span>Session</span><select value={activeSession} onChange={e => { setSession(e.target.value); setLevelPick(null); setSelected(new Set()); }}>{sessions.map(s => <option key={s} value={s}>{s}{s === q.data.session ? ' (current)' : ''}</option>)}</select></label>
     </div>
+    {lockedLevel && <p className="study-lock">{activeSession} is registered as {lockedLevel} level. To switch level for this session, remove its courses first.</p>}
     <div className="study-grid">
       <Panel title={`${level} level courses`} action={<label className="study-search"><Search size={15}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search courses" aria-label="Search courses"/></label>}>
         {sections.map(({ semester, courses }) => {
@@ -109,7 +117,7 @@ export function PortalCourses() {
                 <label>
                   <input type="checkbox" checked={on || done} disabled={done || blocked} onChange={() => toggle(course)}/>
                   <span className="study-code">{course.code}</span>
-                  <span className="study-title">{course.title}{course.owner_user_id && <em>Yours</em>}{done && <em className="study-reg"><Check size={11}/> Registered</em>}</span>
+                  <span className="study-title">{course.title}{course.owner_user_id && <em>Yours</em>}</span>
                   <span className="study-units">{course.units}<small>u</small></span>
                 </label>
               </li>;

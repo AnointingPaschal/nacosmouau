@@ -228,3 +228,10 @@
 .study-bulk-btn:not(:disabled):hover { transform: translateY(-2px); }
 .study-mine li { grid-template-columns: 22px minmax(0, 1fr) auto auto; }
 .study-mine li.is-picked { background: #fde5e133; }
+
+/* Registered rows: faded green ticks, no badge */
+.study-courses li.is-done { background: color-mix(in srgb, var(--brand) 6%, var(--surface)); border-color: color-mix(in srgb, var(--brand) 22%, var(--line)); }
+.study-courses li.is-done input[type=checkbox]:disabled { accent-color: var(--brand); opacity: .55; }
+.study-courses li.is-done .study-code, .study-courses li.is-done .study-title { color: var(--ink); opacity: .75; }
+.study-tabs button:disabled { opacity: .35; cursor: not-allowed; }
+.study-lock { margin: -4px 0 12px; padding: 8px 12px; border-radius: 12px; background: var(--soft); font-size: 12.5px; color: var(--muted); }
