@@ -9,7 +9,7 @@ const REVEAL = [
 ].join(',');
 
 const SPOT = [
-  '.metric', '.executive-card', '.event-card', '.news-row', '.announcement-row', '.publication-card',
+  '.executive-card', '.event-card', '.news-row', '.announcement-row', '.publication-card',
   '.quick-card', '.workspace-panel', '.vision-stack article', '.achievement-card', '.document-row', '.auth-card',
 ].join(',');
 
