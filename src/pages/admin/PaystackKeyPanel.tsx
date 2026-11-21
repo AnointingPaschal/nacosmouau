@@ -7,7 +7,7 @@ import { api } from '../../lib/api';
 import { LoadingState } from '../../components/States';
 import { Panel, Pill } from '../../components/Workspace';
 
-interface KeyStatus { source: 'database' | 'environment' | 'none'; last4: string | null; updated_at: string | null; encryption_ready: boolean; caller_is_super_admin: boolean; two_factor_enabled: boolean }
+export interface KeyStatus { source: 'database' | 'environment' | 'none'; last4: string | null; updated_at: string | null; encryption_ready: boolean; caller_is_super_admin: boolean; two_factor_enabled: boolean }
 interface TwoFactor { enabled: boolean; pending: boolean; backup_codes_left: number; encryption_ready: boolean }
 const message = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
 
@@ -43,34 +43,32 @@ function TwoFactorSetup({ status }: { status: TwoFactor }) {
   </form>;
 }
 
-export function PaystackKeyPanel() {
+/** Secret key fields shown inside the main payment settings form, so one Save button covers everything. */
+export function PaystackSecretFields({ status, secret, setSecret, code, setCode, password }: { status: KeyStatus; secret: string; setSecret: (v: string) => void; code: string; setCode: (v: string) => void; password: string }) {
   const client = useQueryClient();
-  const status = useQuery({ queryKey: ['staff', 'paystack-key'], queryFn: ({ signal }) => api.get<KeyStatus>('staff/paystack-key', signal), retry: false });
-  const twoFactor = useQuery({ queryKey: ['staff', 'two-factor'], queryFn: ({ signal }) => api.get<TwoFactor>('staff/two-factor', signal), retry: false, enabled: Boolean(status.data?.caller_is_super_admin) });
-  const [secret, setSecret] = useState(''); const [password, setPassword] = useState(''); const [code, setCode] = useState('');
-  const done = async () => { setSecret(''); setPassword(''); setCode(''); await client.invalidateQueries({ queryKey: ['staff'] }); };
-  const save = useMutation({ mutationFn: () => api.put('staff/paystack-key', { secret_key: secret, password, code }), onSuccess: async () => { toast.success('Paystack secret key saved'); await done(); }, onError: e => toast.error(message(e, 'Could not save the key')) });
-  const remove = useMutation({ mutationFn: () => api.delete('staff/paystack-key', { password, code }), onSuccess: async () => { toast.success('Saved key removed'); await done(); }, onError: e => toast.error(message(e, 'Could not remove the key')) });
-  if (status.isLoading) return <LoadingState/>;
-  const s = status.data; if (!s) return null;
-  const removeWith = () => { if (window.confirm('Remove the saved Paystack secret key? Payments fall back to the Cloudflare secret, if one is set.')) remove.mutate(); };
-  return <Panel title="Paystack secret key" action={<KeyRound size={18}/>}>
-    <div className="pk-state">{s.source === 'database' ? <Pill value="active"/> : s.source === 'environment' ? <Pill value="pending"/> : <Pill value="unpaid"/>}<span>{s.source === 'database' ? `Saved here, ending in ${s.last4}. Stored encrypted.` : s.source === 'environment' ? 'Using the PAYSTACK_SECRET_KEY secret from Cloudflare. Save a key here to replace it.' : 'Not set. Members cannot pay online until it is.'}</span></div>
-    {!s.encryption_ready && <p className="pk-warn">The server is missing its encryption key (SETTINGS_ENCRYPTION_KEY), so a key cannot be stored here yet.</p>}
-    {!s.caller_is_super_admin ? <p className="field-hint">Only a super administrator can change the secret key.</p> : <>
-      <h3 className="pk-h">Step 1: Google 2FA</h3>
-      {twoFactor.isLoading || !twoFactor.data ? <LoadingState/> : <TwoFactorSetup status={twoFactor.data}/>}
-      <h3 className="pk-h">Step 2: Save the key</h3>
-      <form className="form-stack" onSubmit={(e: FormEvent) => { e.preventDefault(); save.mutate(); }}>
-        <label className="field"><span>Secret key</span><input type="password" value={secret} onChange={e => setSecret(e.target.value)} placeholder="sk_test_… or sk_live_…" autoComplete="off" spellCheck={false} disabled={!s.two_factor_enabled}/></label>
-        <div className="crud-form-grid">
-          <label className="field"><span>Your password</span><input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" disabled={!s.two_factor_enabled}/></label>
-          <label className="field"><span>Authenticator code</span><input value={code} onChange={e => setCode(e.target.value)} autoComplete="one-time-code" placeholder="6-digit or backup code" disabled={!s.two_factor_enabled}/></label>
-        </div>
-        <div className="pk-row"><button className="button button-green" disabled={save.isPending || !s.two_factor_enabled || !secret || !password || !code || !s.encryption_ready}><ShieldCheck size={15}/> {save.isPending ? 'Saving…' : 'Save secret key'}</button>
-          {s.source === 'database' && <button type="button" className="button button-outline" disabled={!password || !code} onClick={removeWith}><Trash2 size={14}/> Remove saved key</button>}</div>
-        <p className="field-hint">The key is encrypted before it is stored and is never shown again, only its last four characters. Every save is recorded in the audit log.</p>
-      </form>
-    </>}
+  const remove = useMutation({
+    mutationFn: () => api.delete('staff/paystack-key', { password, code }),
+    onSuccess: async () => { toast.success('Saved key removed'); setCode(''); await client.invalidateQueries({ queryKey: ['staff'] }); },
+    onError: e => toast.error(message(e, 'Could not remove the key')),
+  });
+  const locked = !status.caller_is_super_admin || !status.two_factor_enabled || !status.encryption_ready;
+  return <div className="pk-fields">
+    <div className="pk-state">{status.source === 'database' ? <Pill value="active"/> : status.source === 'environment' ? <Pill value="pending"/> : <Pill value="unpaid"/>}<span>{status.source === 'database' ? `Secret key saved, ending in ${status.last4}. Stored encrypted.` : status.source === 'environment' ? 'Secret key comes from the Cloudflare secret. Save one here to replace it.' : 'Secret key not set. Members cannot pay online until it is.'}</span></div>
+    {!status.encryption_ready && <p className="pk-warn">The server is missing its encryption key (SETTINGS_ENCRYPTION_KEY), so a key cannot be stored here yet.</p>}
+    {!status.caller_is_super_admin ? <p className="field-hint">Only a super administrator can change the secret key.</p>
+      : !status.two_factor_enabled ? <p className="field-hint">Turn on Google 2FA in the Security panel below first. It is needed to change the secret key.</p> : null}
+    <label className="field"><span>Secret key (leave empty to keep the current one)</span><input type="password" value={secret} onChange={e => setSecret(e.target.value)} placeholder="sk_test_… or sk_live_…" autoComplete="off" spellCheck={false} disabled={locked}/></label>
+    {(secret || status.source === 'database') && !locked && <label className="field"><span>Authenticator code {secret ? '(required to save the key)' : '(needed to remove it)'}</span><input value={code} onChange={e => setCode(e.target.value)} autoComplete="one-time-code" placeholder="6-digit or backup code" inputMode="numeric"/></label>}
+    {status.source === 'database' && !locked && <button type="button" className="button button-outline btn-sm" disabled={!password || !code || remove.isPending} onClick={() => { if (window.confirm('Remove the saved Paystack secret key? Payments fall back to the Cloudflare secret, if one is set.')) remove.mutate(); }}><Trash2 size={14}/> Remove saved key</button>}
+    <p className="field-hint">The key is encrypted before it is stored and never shown again, only its last four characters. Enter your password in the box below to confirm.</p>
+  </div>;
+}
+
+/** One-time security setup for the super administrator. */
+export function SecurityPanel({ status }: { status: KeyStatus }) {
+  const twoFactor = useQuery({ queryKey: ['staff', 'two-factor'], queryFn: ({ signal }) => api.get<TwoFactor>('staff/two-factor', signal), retry: false, enabled: status.caller_is_super_admin });
+  if (!status.caller_is_super_admin) return null;
+  return <Panel title="Security: Google 2FA" action={<KeyRound size={18}/>}>
+    {twoFactor.isLoading || !twoFactor.data ? <LoadingState/> : <TwoFactorSetup status={twoFactor.data}/>}
   </Panel>;
 }

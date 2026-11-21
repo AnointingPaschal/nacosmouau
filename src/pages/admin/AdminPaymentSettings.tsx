@@ -6,7 +6,7 @@ import { api } from '../../lib/api';
 import { fromKobo, toKobo } from '../../lib/money';
 import { ErrorState, LoadingState } from '../../components/States';
 import { PageTitle, Panel } from '../../components/Workspace';
-import { PaystackKeyPanel } from './PaystackKeyPanel';
+import { PaystackSecretFields, SecurityPanel, type KeyStatus } from './PaystackKeyPanel';
 
 const LEVELS = ['100', '200', '300', '400'];
 interface Data {
@@ -21,6 +21,8 @@ export function AdminPaymentSettings() {
   const [dues, setDues] = useState<Record<string, string>>({});
   const [bank, setBank] = useState({ bank_name: '', bank_account_name: '', bank_account_number: '' });
   const [key, setKey] = useState('');
+  const [secret, setSecret] = useState(''); const [code, setCode] = useState('');
+  const keyStatus = useQuery({ queryKey: ['staff', 'paystack-key'], queryFn: ({ signal }) => api.get<KeyStatus>('staff/paystack-key', signal), retry: false });
   const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -37,11 +39,12 @@ export function AdminPaymentSettings() {
   const save = async (e: FormEvent) => {
     e.preventDefault(); setBusy(true);
     try {
+      if (secret) await api.put('staff/paystack-key', { secret_key: secret, password, code });
       await api.put('staff/payment-settings', {
         dues_by_level: Object.fromEntries(LEVELS.map(l => [l, toKobo(dues[l] || 0)])), ...bank, paystack_public_key: key,
         super_admin_email: d.caller_is_super_admin ? undefined : email, super_admin_password: password,
       });
-      toast.success('Payment settings saved.'); setPassword('');
+      toast.success(secret ? 'Payment settings and secret key saved.' : 'Payment settings saved.'); setPassword(''); setSecret(''); setCode('');
       await client.invalidateQueries({ queryKey: ['staff'] }); await client.invalidateQueries({ queryKey: ['portal'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Settings could not be saved'); } finally { setBusy(false); }
   };
@@ -64,7 +67,7 @@ export function AdminPaymentSettings() {
       </Panel>
       <Panel title="Paystack">
         <label className="field"><span>Public key</span><input value={key} onChange={e => setKey(e.target.value)} placeholder="pk_test_…" autoComplete="off" spellCheck={false}/></label>
-        <p className="field-hint">The secret key is saved separately below, with your password and Google 2FA.</p>
+        {keyStatus.data && <PaystackSecretFields status={keyStatus.data} secret={secret} setSecret={setSecret} code={code} setCode={setCode} password={password}/>}
       </Panel>
       <Panel title="Confirm with a super administrator">
         <p className="field-hint"><ShieldCheck size={14}/> {d.caller_is_super_admin ? 'Enter your password to save these changes.' : 'Enter the email and password of a super administrator to save these changes.'}</p>
@@ -74,10 +77,10 @@ export function AdminPaymentSettings() {
         </div>
       </Panel>
       <div className="row-right" style={{ justifyContent: 'flex-start' }}>
-        <button className="button button-green" disabled={busy || !password}><KeyRound size={16}/> {busy ? 'Saving…' : 'Save payment settings'}</button>
+        <button className="button button-green" disabled={busy || !password || Boolean(secret && !code)}><KeyRound size={16}/> {busy ? 'Saving…' : 'Save payment settings'}</button>
         <span className="field-hint"><Wallet size={14}/> <Landmark size={14}/> Changes are recorded in the audit log.</span>
       </div>
     </form>
-    <PaystackKeyPanel/>
+    {keyStatus.data && <SecurityPanel status={keyStatus.data}/>}
   </>;
 }
