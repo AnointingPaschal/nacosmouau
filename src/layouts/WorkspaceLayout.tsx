@@ -1,6 +1,6 @@
 import { useSession } from '../hooks/useSession';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, ChevronDown, CreditCard, FileText, FolderOpen, GraduationCap, HandHeart, IdCard, Images, KeyRound, Landmark, LayoutDashboard, LayoutPanelTop, ListTree, LogOut, Mail, Menu, Moon, Newspaper, ScrollText, Settings, Sun, Ticket, TrendingUp, UserRound, Users, UsersRound, Vote, Wallet, X, CalendarDays, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, BarChart3, ChevronDown, CreditCard, FileText, FolderOpen, GraduationCap, HandHeart, IdCard, Images, KeyRound, Landmark, LayoutDashboard, LayoutPanelTop, ListTree, LogOut, Mail, Menu, Moon, Newspaper, ScrollText, Settings, Sun, Ticket, TrendingUp, UserRound, Users, UsersRound, Vote, Wallet, X, CalendarDays, BookOpen, Calculator, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ const adminGroups: NavGroup[] = [
 ];
 const portalGroups: NavGroup[] = [
   { title: 'My space', items: [['Overview', '/portal', LayoutDashboard], ['My membership', '/portal/profile', UserRound], ['Digital ID', '/portal/id-card', IdCard]] },
+  { title: 'Academics', items: [['Courses', '/portal/courses', BookOpen], ['Results & GPA', '/portal/results', Calculator]] },
   { title: 'Money and voting', items: [['Payments', '/portal/payments', CreditCard], ['Elections', '/portal/elections', Vote]] },
   { title: 'Activities', items: [['Events & tickets', '/portal/events', Ticket], ['Welfare', '/portal/welfare', HandHeart], ['Documents', '/portal/documents', FolderOpen]] },
   { title: 'Account', items: [['Settings', '/portal/settings', Settings]] },

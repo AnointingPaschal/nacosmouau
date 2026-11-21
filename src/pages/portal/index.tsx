@@ -3,6 +3,8 @@ import { DigitalId } from './DigitalId';
 import { PortalBallot, PortalElections } from './PortalElections';
 import { PortalDocuments, PortalEvents, PortalMembership, PortalSettings, PortalWelfare } from './PortalMisc';
 import { PortalPayments } from './PortalPayments';
+import { PortalCourses } from './Courses';
+import { PortalResults } from './Results';
 
 export { PortalOverview } from './PortalMisc';
 
@@ -11,6 +13,8 @@ export function PortalRouter() {
   switch (module) {
     case 'profile': return <PortalMembership/>;
     case 'id-card': return <DigitalId/>;
+    case 'courses': return <PortalCourses/>;
+    case 'results': return <PortalResults/>;
     case 'payments': return <PortalPayments/>;
     case 'events': return <PortalEvents/>;
     case 'elections': return id ? <PortalBallot/> : <PortalElections/>;

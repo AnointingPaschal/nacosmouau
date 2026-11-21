@@ -10,6 +10,7 @@ import './theme-events.css';
 import './theme-responsive.css';
 import './theme-portal.css';
 import './theme-fx.css';
+import './theme-study.css';
 import { installFx } from './lib/fx';
 
 class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean}> {
