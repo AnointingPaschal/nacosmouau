@@ -9,6 +9,8 @@ import './theme-pages.css';
 import './theme-events.css';
 import './theme-responsive.css';
 import './theme-portal.css';
+import './theme-fx.css';
+import { installFx } from './lib/fx';
 
 class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean}> {
   state = { hasError: false };
@@ -22,3 +24,4 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {hasError: boole
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } } });
 createRoot(document.getElementById('root')!).render(<StrictMode><AppErrorBoundary><BrowserRouter><QueryClientProvider client={queryClient}><App/></QueryClientProvider></BrowserRouter></AppErrorBoundary></StrictMode>);
+installFx();
