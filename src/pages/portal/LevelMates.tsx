@@ -22,11 +22,11 @@ export function PortalLevelMates() {
     <PageTitle eyebrow="CLASS" title={`${level} level mates`} description={`${all.length} active member${all.length === 1 ? '' : 's'} in your class for ${q.data.session}.`}/>
     <div className="lm-reps">{(['rep', 'assistant'] as const).map(role => { const m = reps.find(r => r.rep_role === role); return <div key={role} className={`lm-rep${m ? '' : ' empty'}`}>
       <span className="lm-badge"><BadgeCheck size={14}/> {REP_LABEL[role]}</span>
-      {m ? <><b>{m.full_name}</b><small>{m.matric_number}</small>{m.phone && <a href={`tel:${m.phone}`}><Phone size={14}/> {m.phone}</a>}</> : <><b>Not elected yet</b><small><Link to="/portal/class-election">See the class election</Link></small></>}
+      {m ? <><b>{m.full_name}</b><small>{m.matric_number}</small>{m.phone && <a href={`tel:${m.phone}`}><Phone size={12}/> {m.phone}</a>}</> : <><b>Not elected</b><small><Link to="/portal/class-election">Class election</Link></small></>}
     </div>; })}</div>
     {notices.length > 0 && <Panel title="From your class reps" action={<Megaphone size={18}/>}><ul className="lm-notices">{notices.map(n => <li key={n.id}><b>{n.title}</b><p>{n.body}</p><small>{n.author} · {when(n.created_at)}</small></li>)}</ul></Panel>}
     <Panel title="Classmates" action={<label className="study-search"><Search size={15}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or matric" aria-label="Search classmates"/></label>}>
-      {rest.length === 0 ? <p className="field-hint">No one matches your search.</p> : <ul className="lm-list">{rest.map(m => <li key={m.id}><span className="lm-avatar">{initials(m.full_name)}</span><div><b>{m.full_name}</b><small>{m.matric_number ?? 'Matric not set'}</small></div></li>)}</ul>}
+      {rest.length === 0 ? <p className="field-hint">No one matches your search.</p> : <ul className="lm-list">{rest.map(m => <li key={m.id}><span className="lm-avatar">{initials(m.full_name)}</span><div><b>{m.full_name}</b><small>{m.matric_number ?? 'Matric not set'}</small></div>{m.phone ? <a className="lm-call" href={`tel:${m.phone}`} aria-label={`Call ${m.full_name}`}><Phone size={13}/><span>{m.phone}</span></a> : <span className="lm-call none">No phone</span>}</li>)}</ul>}
     </Panel>
   </>;
 }

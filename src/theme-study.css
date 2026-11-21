@@ -281,3 +281,22 @@
 .cr-reps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .cr-reps li { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--ink); color: var(--page); } .cr-reps svg { color: #ffd37a; flex: none; } .cr-reps small { display: block; opacity: .7; letter-spacing: .1em; text-transform: uppercase; font-size: 10.5px; } .cr-reps b { display: block; } .cr-reps span { font-size: 12px; opacity: .75; }
 .cr-actions { display: grid; gap: 6px; justify-items: end; flex: none; }
 @media (max-width: 760px) { .lm-reps, .ce-grid, .rep-cols, .cr-reps { grid-template-columns: 1fr; } .lm-list { grid-template-columns: 1fr; } .ce-mine { flex-direction: column; } .ce-mine-side { justify-items: start; } .rep-stats { gap: 6px; } .rep-stats > div { padding: 8px 10px; column-gap: 8px; } .rep-stats b { font-size: 18px; } .rep-stats span { font-size: 10px; } .rep-home { padding: 14px; border-radius: 18px; } .rep-home h2 { font-size: 19px; } .ce-cands li { flex-wrap: wrap; } .cr-actions { grid-auto-flow: column; justify-items: start; } }
+
+/* Level mates: small and dense, with phone numbers */
+.lm-call { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 8px; background: var(--soft); color: var(--brand-deep); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.lm-call.none { color: var(--subtle); font-weight: 500; background: transparent; }
+.lm-call:hover { background: #e6f4ec; }
+.lm-list li { min-width: 0; } .lm-list li > div { min-width: 0; flex: 1; } .lm-list b { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 760px) {
+  .lm-reps { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .lm-rep { padding: 10px; border-radius: 14px; gap: 2px; }
+  .lm-rep b { font-size: 13px; } .lm-rep small { font-size: 11px; } .lm-rep a { font-size: 11.5px; }
+  .lm-badge { padding: 3px 7px; font-size: 9px; border-radius: 6px; gap: 4px; }
+  .lm-badge svg { width: 11px; height: 11px; }
+  .lm-notices { gap: 8px; } .lm-notices li { padding: 8px 10px; border-radius: 10px; } .lm-notices b { font-size: 13px; } .lm-notices p { font-size: 12.5px; margin: 2px 0 4px; } .lm-notices small { font-size: 10.5px; }
+  .lm-list li { gap: 9px; padding: 7px 2px; }
+  .lm-avatar { width: 30px; height: 30px; font-size: 11px; }
+  .lm-list b { font-size: 12.5px; } .lm-list small { font-size: 10.5px; }
+  .lm-call { padding: 4px 7px; font-size: 11px; border-radius: 7px; gap: 4px; }
+  .workspace-panel:has(.lm-list) { padding: 10px; border-radius: 16px; }
+}

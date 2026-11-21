@@ -22,7 +22,7 @@ async function mates(env: Env, user: Me) {
   const [session, level] = await Promise.all([currentSession(env), myLevel(env, user)]);
   if (!level) return json({ level: null, session, members: [], notices: [] });
   const [members, notices] = await Promise.all([
-    env.DB.prepare("SELECT u.id,u.full_name,u.matric_number, r.role AS rep_role, CASE WHEN r.role IS NOT NULL THEN u.phone END AS phone FROM users u LEFT JOIN class_reps r ON r.user_id=u.id AND r.session=? AND r.level=? WHERE u.academic_level=? AND u.status='active' ORDER BY (r.role='rep') DESC, (r.role='assistant') DESC, u.full_name COLLATE NOCASE").bind(session, level, level).all(),
+    env.DB.prepare("SELECT u.id,u.full_name,u.matric_number, r.role AS rep_role, u.phone AS phone FROM users u LEFT JOIN class_reps r ON r.user_id=u.id AND r.session=? AND r.level=? WHERE u.academic_level=? AND u.status='active' ORDER BY (r.role='rep') DESC, (r.role='assistant') DESC, u.full_name COLLATE NOCASE").bind(session, level, level).all(),
     env.DB.prepare('SELECT n.id,n.title,n.body,n.created_at,n.author_id,u.full_name AS author FROM class_notices n JOIN users u ON u.id=n.author_id WHERE n.level=? AND n.session=? ORDER BY n.created_at DESC LIMIT 20').bind(level, session).all<{ created_at: string }>(),
   ]);
   return json({ level, session, members: members.results ?? [], notices: (notices.results ?? []).map(n => ({ ...n, created_at: iso(n.created_at) })), me: user.id });
